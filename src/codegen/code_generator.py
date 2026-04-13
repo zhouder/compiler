@@ -116,6 +116,8 @@ class CodeGenerator:
                 ])
             elif op == "u+":
                 lines.append(f"MOV {res}, {a1}")
+            elif op == "addr":
+                lines.append(f"LEA {res}, {a1}")
             elif op == "jz":
                 lines.extend([
                     f"CMP {a1}, 0",

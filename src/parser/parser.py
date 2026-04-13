@@ -16,8 +16,19 @@ class Parser:
     def parse(self):
         functions = []
         while not self.ts.is_eof():
+            if self.skip_preprocessor_line():
+                continue
             functions.append(self.parse_function())
         return Program(functions)
+
+    def skip_preprocessor_line(self):
+        tok = self.ts.current()
+        if not (tok.type == TokenType.DL and tok.lexeme == "#"):
+            return False
+        line = tok.line
+        while not self.ts.is_eof() and self.ts.current().line == line:
+            self.ts.advance()
+        return True
 
     def parse_function(self):
         ret_type = self.parse_type_name()
@@ -181,7 +192,7 @@ class Parser:
 
     def parse_unary(self):
         tok = self.ts.current()
-        if tok.type == TokenType.OP and tok.lexeme in ("+", "-", "!"):
+        if tok.type == TokenType.OP and tok.lexeme in ("+", "-", "!", "&"):
             op = self.ts.advance().lexeme
             operand = self.parse_unary()
             return UnaryExpr(op, operand)

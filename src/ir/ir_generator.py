@@ -124,6 +124,10 @@ class IRGenerator:
         return node.name
 
     def eval_UnaryExpr(self, node: UnaryExpr):
+        if node.operator == "&" and isinstance(node.operand, Identifier):
+            temp = self.new_temp()
+            self.emit("addr", node.operand.name, "_", temp)
+            return temp
         operand = self.eval_expr(node.operand)
         temp = self.new_temp()
         self.emit(f"u{node.operator}", operand, "_", temp)
@@ -145,9 +149,14 @@ class IRGenerator:
             return "0"
         if node.callee == "scanf":
             for arg in node.args[1:]:
-                target = self.eval_expr(arg)
+                target = self.scanf_target(arg)
                 self.emit("read", "_", "_", target)
             return "0"
         temp = self.new_temp()
         self.emit("call", node.callee, len(node.args), temp)
         return temp
+
+    def scanf_target(self, node):
+        if isinstance(node, UnaryExpr) and node.operator == "&" and isinstance(node.operand, Identifier):
+            return node.operand.name
+        return self.eval_expr(node)

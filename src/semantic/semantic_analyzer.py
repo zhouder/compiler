@@ -80,9 +80,15 @@ class SemanticAnalyzer:
         return self.visit(node.expr)
 
     def visit_CallExpr(self, node: CallExpr):
-        if node.callee in ("printf", "scanf"):
+        if node.callee == "printf":
             for arg in node.args:
                 self.visit(arg)
+            return "int"
+        if node.callee == "scanf":
+            if not node.args or not isinstance(node.args[0], Literal) or node.args[0].literal_type != "string":
+                raise SemanticError("scanf 的第一个参数必须是格式字符串")
+            for arg in node.args[1:]:
+                self.ensure_scanf_target(arg)
             return "int"
         raise SemanticError(f"当前版本不支持的函数调用：{node.callee}")
 
@@ -98,6 +104,11 @@ class SemanticAnalyzer:
         raise SemanticError(f"不支持的二元表达式类型：{left_type} {node.operator} {right_type}")
 
     def visit_UnaryExpr(self, node: UnaryExpr):
+        if node.operator == "&":
+            if not isinstance(node.operand, Identifier):
+                raise SemanticError("& 后面必须是变量名")
+            operand_type = self.visit(node.operand)
+            return f"{operand_type}*"
         operand_type = self.visit(node.operand)
         if node.operator == "!":
             return "int"
@@ -120,3 +131,10 @@ class SemanticAnalyzer:
         if lhs_type == "int" and rhs_type == "char":
             return
         raise SemanticError(f"类型不匹配：不能把 {rhs_type} 赋值给 {lhs_type} 变量 {name}")
+
+    def ensure_scanf_target(self, node):
+        if isinstance(node, UnaryExpr) and node.operator == "&" and isinstance(node.operand, Identifier):
+            if self.symbols.lookup(node.operand.name) is None:
+                raise SemanticError(f"变量未定义：{node.operand.name}")
+            return
+        raise SemanticError("scanf 的输入参数必须是 &变量")
