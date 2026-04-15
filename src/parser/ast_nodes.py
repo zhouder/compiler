@@ -8,13 +8,39 @@ class ASTNode:
 
 @dataclass
 class Program(ASTNode):
-    functions: List["FunctionDef"]
+    includes: List["Include"]
+    declarations: List[ASTNode]
+
+    @property
+    def functions(self):
+        return [item for item in self.declarations if isinstance(item, FunctionDef)]
+
+
+@dataclass
+class Include(ASTNode):
+    text: str
+    header: str = ""
+
+
+@dataclass
+class StructDef(ASTNode):
+    name: str
+    fields: List["VarDecl"]
+
+
+@dataclass
+class Param(ASTNode):
+    param_type: str
+    name: str
+    array_size: Optional[ASTNode] = None
+    is_array: bool = False
 
 
 @dataclass
 class FunctionDef(ASTNode):
     return_type: str
     name: str
+    params: List[Param]
     body: "Block"
 
 
@@ -28,6 +54,13 @@ class VarDecl(ASTNode):
     var_type: str
     name: str
     init: Optional[ASTNode] = None
+    array_size: Optional[ASTNode] = None
+    is_array: bool = False
+
+
+@dataclass
+class DeclStmt(ASTNode):
+    declarations: List[VarDecl]
 
 
 @dataclass
@@ -58,6 +91,22 @@ class ForStmt(ASTNode):
 
 
 @dataclass
+class DoWhileStmt(ASTNode):
+    body: ASTNode
+    condition: ASTNode
+
+
+@dataclass
+class BreakStmt(ASTNode):
+    pass
+
+
+@dataclass
+class ContinueStmt(ASTNode):
+    pass
+
+
+@dataclass
 class ReturnStmt(ASTNode):
     value: Optional[ASTNode] = None
 
@@ -65,6 +114,11 @@ class ReturnStmt(ASTNode):
 @dataclass
 class ExprStmt(ASTNode):
     expr: ASTNode
+
+
+@dataclass
+class EmptyStmt(ASTNode):
+    pass
 
 
 @dataclass
@@ -95,3 +149,16 @@ class Literal(ASTNode):
 @dataclass
 class Identifier(ASTNode):
     name: str
+
+
+@dataclass
+class ArrayAccess(ASTNode):
+    array: ASTNode
+    index: ASTNode
+
+
+@dataclass
+class MemberAccess(ASTNode):
+    obj: ASTNode
+    member: str
+    through_pointer: bool = False

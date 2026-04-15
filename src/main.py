@@ -35,6 +35,9 @@ def write_outputs(source_path: Path, stage_outputs, sections):
     stem = source_path.stem
     for suffix, content in stage_outputs.items():
         (OUTPUT_DIR / f"{stem}.{suffix}").write_text(content, encoding="utf-8")
+        if suffix == "asm":
+            dos_stem = "".join(ch for ch in stem if ch.isalnum() or ch == "_")[:8] or "output"
+            (OUTPUT_DIR / f"{dos_stem}.asm").write_text(content, encoding="utf-8")
 
     log_text = "\n\n".join(f"=== {title} ===\n{body}" for title, body in sections)
     (OUTPUT_DIR / f"{stem}.log.txt").write_text(log_text, encoding="utf-8")
@@ -115,7 +118,7 @@ def compile_file(path: str):
 
 if __name__ == "__main__":
     if len(sys.argv) != 2:
-        print("用法: python src/main.py examples/test1.c")
+        print("用法: python src/main.py examples/test.c")
         raise SystemExit(1)
     ok = compile_file(sys.argv[1])
     raise SystemExit(0 if ok else 1)
