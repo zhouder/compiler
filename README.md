@@ -20,7 +20,8 @@ compiler/
 │  ├─ semantic/              # 语义分析与符号表
 │  ├─ ir/                    # 四元式 IR 生成
 │  ├─ codegen/               # 目标汇编代码生成
-│  └─ main.py                # 编译器入口
+│  ├─ main.py                # 命令行入口
+│  └─ gui.py                 # 可视化界面入口
 ├─ output/                   # 运行后生成，保存各阶段输出
 ├─ README.md
 └─ TEAM.md
@@ -90,6 +91,8 @@ IR 四元式 -> ASM 汇编代码
 
 ## 运行课程设计主流程
 
+命令行方式：
+
 在项目根目录执行：
 
 ```powershell
@@ -113,6 +116,20 @@ output/test.log.txt
 - `test.ir.txt`：中间代码四元式；
 - `test.asm`：目标汇编代码；
 - `test.log.txt`：整次编译过程的汇总输出。
+
+可视化界面方式：
+
+```powershell
+python src\gui.py
+```
+
+界面支持：
+
+- 打开和编辑 C 源程序；
+- 保存当前源程序；
+- 点击按钮执行完整编译流程；
+- 通过阶段导航查看 `TOKENS`、`AST`、`SEMANTIC`、`IR`、`ASM`；
+- 编译结果仍会写入 `output/` 目录。
 
 ## 手动验证 ASM
 

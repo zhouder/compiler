@@ -1,6 +1,7 @@
 import sys
 from pathlib import Path
 from pprint import pformat
+from dataclasses import dataclass
 
 CURRENT_DIR = Path(__file__).resolve().parent
 if str(CURRENT_DIR) not in sys.path:
@@ -16,6 +17,16 @@ from codegen.code_generator import CodeGenerator
 
 PROJECT_ROOT = CURRENT_DIR.parent
 OUTPUT_DIR = PROJECT_ROOT / "output"
+
+
+@dataclass
+class CompileResult:
+    ok: bool
+    source_path: Path
+    sections: list
+    stage_outputs: dict
+    log_text: str
+    output_dir: Path
 
 
 def resolve_source_path(path: str) -> Path:
@@ -44,7 +55,7 @@ def write_outputs(source_path: Path, stage_outputs, sections):
     return log_text
 
 
-def compile_file(path: str):
+def run_pipeline(path: str) -> CompileResult:
     source_path = resolve_source_path(path)
     with open(source_path, "r", encoding="utf-8") as f:
         source = f.read()
@@ -64,9 +75,7 @@ def compile_file(path: str):
         error_text = "发现词法错误，停止编译。\n" + "\n".join(str(t) for t in lexical_errors)
         sections.append(("ERROR", error_text))
         log_text = write_outputs(source_path, stage_outputs, sections)
-        print(log_text)
-        print(f"\n阶段输出已保存到：{OUTPUT_DIR}")
-        return False
+        return CompileResult(False, source_path, sections, stage_outputs, log_text, OUTPUT_DIR)
 
     try:
         parser = Parser(tokens)
@@ -74,9 +83,7 @@ def compile_file(path: str):
     except SyntaxError as e:
         sections.append(("ERROR", f"语法错误：{e}"))
         log_text = write_outputs(source_path, stage_outputs, sections)
-        print(log_text)
-        print(f"\n阶段输出已保存到：{OUTPUT_DIR}")
-        return False
+        return CompileResult(False, source_path, sections, stage_outputs, log_text, OUTPUT_DIR)
 
     ast_text = pformat(ast)
     sections.append(("AST", ast_text))
@@ -87,9 +94,7 @@ def compile_file(path: str):
     except SemanticError as e:
         sections.append(("SEMANTIC", f"语义错误：{e}"))
         log_text = write_outputs(source_path, stage_outputs, sections)
-        print(log_text)
-        print(f"\n阶段输出已保存到：{OUTPUT_DIR}")
-        return False
+        return CompileResult(False, source_path, sections, stage_outputs, log_text, OUTPUT_DIR)
 
     sections.append(("SEMANTIC", "语义分析通过"))
 
@@ -98,9 +103,7 @@ def compile_file(path: str):
     except TypeError as e:
         sections.append(("ERROR", f"中间代码生成错误：{e}"))
         log_text = write_outputs(source_path, stage_outputs, sections)
-        print(log_text)
-        print(f"\n阶段输出已保存到：{OUTPUT_DIR}")
-        return False
+        return CompileResult(False, source_path, sections, stage_outputs, log_text, OUTPUT_DIR)
 
     ir_text = "\n".join(str(item) for item in ir)
     sections.append(("IR", ir_text))
@@ -111,6 +114,18 @@ def compile_file(path: str):
     stage_outputs["asm"] = asm
 
     log_text = write_outputs(source_path, stage_outputs, sections)
+    return CompileResult(True, source_path, sections, stage_outputs, log_text, OUTPUT_DIR)
+
+
+def compile_file(path: str):
+    result = run_pipeline(path)
+    print(result.log_text)
+    print(f"\n阶段输出已保存到：{result.output_dir}")
+    return result.ok
+
+
+def compile_file_result(path: str) -> CompileResult:
+    return run_pipeline(path)
     print(log_text)
     print(f"\n阶段输出已保存到：{OUTPUT_DIR}")
     return True
