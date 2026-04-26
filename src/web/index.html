@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Compiler Studio Web</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/assets/styles.css">
+</head>
+<body>
+  <div class="app-shell">
+    <header class="topbar">
+      <div class="brand">
+        <span class="brand-mark">C</span>
+        <div>
+          <h1>Compiler Studio</h1>
+          <p>Tokens / AST / Semantic / IR / ASM</p>
+        </div>
+      </div>
+      <label class="filename-input">
+        <span>文件名</span>
+        <input id="filename-input" type="text" value="playground.c" />
+      </label>
+      <div class="topbar-actions">
+        <button id="load-example-btn" class="btn btn-secondary">载入示例</button>
+        <button id="compile-btn" class="btn btn-primary">开始编译</button>
+      </div>
+    </header>
+
+    <main class="workspace">
+      <section class="panel editor-panel">
+        <div class="panel-header">
+          <div>
+            <p class="panel-label">Source Editor</p>
+            <h2>源码输入</h2>
+          </div>
+        </div>
+        <div class="editor-frame">
+          <textarea id="source-editor" spellcheck="false"></textarea>
+        </div>
+      </section>
+
+      <section class="panel output-panel">
+        <div class="panel-header output-header">
+          <div>
+            <p class="panel-label">Pipeline Output</p>
+            <h2>阶段结果</h2>
+          </div>
+          <div class="status-block">
+            <span id="status-badge" class="status-badge idle">就绪</span>
+            <span id="artifact-hint" class="artifact-hint">output/</span>
+          </div>
+        </div>
+
+        <div id="stage-tabs" class="stage-tabs"></div>
+        <div class="output-frame">
+          <pre id="output-viewer"></pre>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <template id="stage-tab-template">
+    <button class="stage-tab" type="button"></button>
+  </template>
+
+  <script src="/assets/app.js"></script>
+</body>
+</html>
