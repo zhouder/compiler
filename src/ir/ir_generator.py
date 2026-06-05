@@ -1,6 +1,6 @@
 from parser.ast_nodes import (
     Program, Include, StructDef, FunctionDef, Block, VarDecl, DeclStmt,
-    Assign, IfStmt, WhileStmt, ForStmt, DoWhileStmt, BreakStmt, ContinueStmt,
+    InitializerList, Assign, IfStmt, WhileStmt, ForStmt, DoWhileStmt, BreakStmt, ContinueStmt,
     ReturnStmt, ExprStmt, EmptyStmt, CallExpr, BinaryExpr, UnaryExpr, Literal,
     Identifier, ArrayAccess, MemberAccess
 )
@@ -13,6 +13,7 @@ class IRGenerator:
         self.temp_id = 0
         self.label_id = 0
         self.loop_stack = []
+        self.struct_fields = {}
 
     def new_temp(self):
         self.temp_id += 1
@@ -50,6 +51,7 @@ class IRGenerator:
         self.emit("include", node.header or node.text, "_", "_")
 
     def visit_StructDef(self, node: StructDef):
+        self.struct_fields[node.name] = node.fields
         self.emit("struct", node.name, "_", "_")
         for field in node.fields:
             self.emit("structfield", field.var_type, self.array_size_value(field), field.name)
@@ -77,8 +79,23 @@ class IRGenerator:
         else:
             self.emit("decl", node.var_type, "_", node.name)
         if node.init is not None:
-            value = self.eval_expr(node.init)
-            self.emit("=", value, "_", node.name)
+            self.emit_initializer(Identifier(node.name), node.var_type, node.is_array, node.init)
+
+    def emit_initializer(self, target, target_type, is_array, init):
+        if is_array and isinstance(init, InitializerList):
+            for index, value in enumerate(init.values):
+                element = ArrayAccess(target, Literal(str(index), "int"))
+                self.emit_initializer(element, target_type, False, value)
+            return
+        if isinstance(init, InitializerList):
+            if not target_type.startswith("struct "):
+                raise TypeError(f"IR 不支持的初始化列表目标：{target_type}")
+            struct_name = target_type.split(" ", 1)[1]
+            for field, value in zip(self.struct_fields.get(struct_name, []), init.values):
+                self.emit_initializer(MemberAccess(target, field.name, False), field.var_type, field.is_array, value)
+            return
+        value = self.eval_expr(init)
+        self.store_lvalue(target, value)
 
     def visit_Assign(self, node: Assign):
         value = self.eval_expr(node.value)

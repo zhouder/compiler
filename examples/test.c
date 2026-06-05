@@ -1,61 +1,21 @@
-#include <stdio.h>
-
-struct Pair {
-    int x;
-    int y;
+struct student {
+    char* name;
+    int num;
+    int age;
+    float score;
 };
 
-int add_pair(struct Pair p) {
-    return p.x + p.y;
-}
+void main() {
+    int i, num_140 = 0;
+    float sum = 0;
+    student sts[2] = {
+        {"Li ping", 5, 18, 145.0},
+        {"Wang ming", 6, 18, 150.0}
+    };
+    int flag;
 
-int sum_array(int arr[], int n) {
-    int i;
-    int total;
+    if (sts[1].score < 140) flag = -1;
+    else flag = 1;
 
-    i = 0;
-    total = 0;
-
-    while (i < n) {
-        if (i == 3) {
-            i = i + 1;
-            continue;
-        }
-
-        total = total + arr[i];
-
-        if (total > 100) {
-            break;
-        }
-
-        i = i + 1;
-    }
-
-    return total;
-}
-
-int main() {
-    struct Pair p;
-    int nums[5];
-    int i;
-    int result;
-
-    p.x = 1;
-    p.y = 2;
-    scanf("%d", &p.x);
-
-    nums[0] = p.x;
-    nums[1] = p.y;
-
-    i = 2;
-    do {
-        nums[i] = i;
-        i = i + 1;
-    } while (i < 5);
-
-    result = sum_array(nums, 5);
-    result = result + add_pair(p);
-
-    printf("%d\n", result);
-    return 0;
+    printf("%d ", flag);
 }

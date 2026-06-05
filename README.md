@@ -6,7 +6,7 @@
 源程序 -> 词法分析 -> 语法分析 -> 语义分析 -> 中间代码 IR -> 目标代码 ASM
 ```
 
-主程序会在控制台输出 `TOKENS`、`AST`、`SEMANTIC`、`IR`、`ASM`，并把各阶段结果写入 `output/` 目录。
+主程序会在控制台输出 `TOKENS`、`AST`、`SEMANTIC`、`IR`、`ASM`，并把各阶段结果写入 `output/` 目录。项目同时提供命令行、桌面 GUI 和网页版可视化界面。
 
 ## 项目结构
 
@@ -21,7 +21,9 @@ compiler/
 │  ├─ ir/                    # 四元式 IR 生成
 │  ├─ codegen/               # 目标汇编代码生成
 │  ├─ main.py                # 命令行入口
-│  └─ gui.py                 # 可视化界面入口
+│  ├─ gui.py                 # 桌面可视化界面入口
+│  ├─ webapp.py              # 网页版可视化服务入口
+│  └─ web/                   # 网页前端资源
 ├─ output/                   # 运行后生成，保存各阶段输出
 ├─ README.md
 └─ TEAM.md
@@ -123,12 +125,39 @@ output/test.log.txt
 python src\gui.py
 ```
 
-界面支持：
+桌面界面支持：
 
 - 打开和编辑 C 源程序；
 - 保存当前源程序；
 - 点击按钮执行完整编译流程；
 - 通过阶段导航查看 `TOKENS`、`AST`、`SEMANTIC`、`IR`、`ASM`；
+- 编译结果仍会写入 `output/` 目录。
+
+网页版可视化界面方式：
+
+```powershell
+python -B src\webapp.py
+```
+
+启动后浏览器访问：
+
+```text
+http://127.0.0.1:8000
+```
+
+也可以指定端口，例如：
+
+```powershell
+python -B src\webapp.py 8080
+```
+
+网页界面支持：
+
+- 在浏览器中编辑 C 子集源码；
+- 一键载入 `examples/test.c` 示例程序；
+- 点击按钮执行完整编译流程；
+- 通过标签页查看 `TOKENS`、`AST`、`SEMANTIC`、`IR`、`ASM`；
+- 源码输入框和阶段输出框独立滚动，适合展示长程序和长输出；
 - 编译结果仍会写入 `output/` 目录。
 
 ## 手动验证 ASM

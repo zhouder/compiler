@@ -64,6 +64,11 @@ class DeclStmt(ASTNode):
 
 
 @dataclass
+class InitializerList(ASTNode):
+    values: List[ASTNode]
+
+
+@dataclass
 class Assign(ASTNode):
     target: "Identifier"
     value: ASTNode

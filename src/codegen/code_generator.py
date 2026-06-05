@@ -84,7 +84,10 @@ class CodeGenerator:
                 self.declare_variable(current_func, q.arg1, q.result)
             elif q.op == "declarr":
                 self.scoped_symbols.setdefault(current_func, set()).add(q.result)
-                self.declare_array(self.scoped_name(current_func, q.result), q.arg2, q.arg1)
+                if q.arg1.startswith("struct "):
+                    self.declare_struct_array(current_func, q.arg1, q.result, q.arg2)
+                else:
+                    self.declare_array(self.scoped_name(current_func, q.result), q.arg2, q.arg1)
 
             for value in (q.arg1, q.arg2, q.result):
                 if self.is_temp(value):
@@ -120,6 +123,18 @@ class CodeGenerator:
         for field in fields:
             self.declare_word(self.field_symbol(func, name, field["name"]), f"{typ}.{field['name']}")
 
+    def declare_struct_array(self, func, typ, name, size):
+        struct_name = typ.split(" ", 1)[1]
+        fields = self.struct_fields.get(struct_name, [])
+        size = int(self.integer_literal(size))
+        if not fields:
+            self.declare_array(self.scoped_name(func, name), size, typ)
+            return
+        for index in range(size):
+            element = f"{name}[{index}]"
+            for field in fields:
+                self.declare_word(self.field_symbol(func, element, field["name"]), f"{typ}[{index}].{field['name']}")
+
     def declare_word(self, name, comment="word"):
         name = self.safe(name)
         if name in self.data_names:
@@ -151,6 +166,7 @@ class CodeGenerator:
                 self.line(f"{self.safe(a1)} PROC")
                 self.line(f"    ; return {a2}, params {res}")
             elif op == "endfunc":
+                self.line("    RET")
                 self.line(f"{self.safe(a1)} ENDP")
                 self.current_func = None
             elif op == "label":
@@ -447,6 +463,10 @@ class CodeGenerator:
             self.store_ax(self.field_symbol(callee, pname, field["name"]), raw=True)
 
     def load_ax(self, value):
+        if self.is_string_literal(value):
+            label = self.new_string_label(self.decode_string(value))
+            self.line(f"    LEA AX, {label}")
+            return
         if self.is_memory_lvalue(value):
             self.load_lvalue_to_ax(value)
             return
@@ -512,6 +532,11 @@ class CodeGenerator:
     def memory_ref_with_func(self, func, value):
         if self.is_temp(value):
             return self.safe(value)
+        if "[" in value and value.endswith("]"):
+            base, index = value[:-1].split("[", 1)
+            if func and base in self.scoped_symbols.get(func, set()):
+                return self.scoped_name(func, f"{base}_{self.safe(index)}")
+            return self.safe(f"{base}_{self.safe(index)}")
         if func and value in self.scoped_symbols.get(func, set()):
             return self.scoped_name(func, value)
         return self.safe(value)

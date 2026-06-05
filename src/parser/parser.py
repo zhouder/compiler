@@ -2,7 +2,7 @@ from lexer.token import TokenType
 from .token_stream import TokenStream
 from .ast_nodes import (
     Program, Include, StructDef, Param, FunctionDef, Block, VarDecl, DeclStmt,
-    Assign, IfStmt, WhileStmt, ForStmt, DoWhileStmt, BreakStmt, ContinueStmt,
+    InitializerList, Assign, IfStmt, WhileStmt, ForStmt, DoWhileStmt, BreakStmt, ContinueStmt,
     ReturnStmt, ExprStmt, EmptyStmt, CallExpr, BinaryExpr, UnaryExpr, Literal,
     Identifier, ArrayAccess, MemberAccess
 )
@@ -16,6 +16,7 @@ ASSIGN_OPS = {"=", "+=", "-=", "*=", "/=", "%="}
 class Parser:
     def __init__(self, tokens):
         self.ts = TokenStream(tokens)
+        self.struct_names = set()
 
     def parse(self):
         includes = []
@@ -57,6 +58,7 @@ class Parser:
     def parse_struct_def(self):
         self.ts.expect(TokenType.RW, "struct", "缺少 struct")
         name = self.ts.expect(TokenType.ID, message="结构体名错误").lexeme
+        self.struct_names.add(name)
         self.ts.expect(TokenType.DL, "{", "结构体定义缺少 {")
         fields = []
         while not (self.ts.current().type == TokenType.DL and self.ts.current().lexeme == "}"):
@@ -76,14 +78,14 @@ class Parser:
             return FunctionDef(var_type, name, params, body)
         init = None
         if self.ts.match(TokenType.OP, "="):
-            init = self.parse_expression()
+            init = self.parse_initializer()
         decls = [VarDecl(var_type, name, init, array_size, is_array)]
         while self.ts.current().type == TokenType.DL and self.ts.current().lexeme == ",":
             self.ts.advance()
             var_type, name, array_size, is_array = self.parse_named_declarator(base_type)
             init = None
             if self.ts.match(TokenType.OP, "="):
-                init = self.parse_expression()
+                init = self.parse_initializer()
             decls.append(VarDecl(var_type, name, init, array_size, is_array))
         self.ts.expect(TokenType.DL, ";", "全局变量定义后缺少 ;")
         return decls[0] if len(decls) == 1 else DeclStmt(decls)
@@ -96,7 +98,11 @@ class Parser:
         if tok.type == TokenType.RW and tok.lexeme == "struct":
             self.ts.advance()
             name = self.ts.expect(TokenType.ID, message="结构体类型名错误").lexeme
+            self.struct_names.add(name)
             return f"struct {name}"
+        if tok.type == TokenType.ID and tok.lexeme in self.struct_names:
+            self.ts.advance()
+            return f"struct {tok.lexeme}"
         raise SyntaxError(f"类型说明符错误：第 {tok.line} 行第 {tok.col} 列，得到 {tok}")
 
     def parse_pointer_depth(self):
@@ -160,6 +166,7 @@ class Parser:
         return (
             (tok.type == TokenType.RW and tok.lexeme in TYPE_KEYWORDS)
             or (tok.type == TokenType.RW and tok.lexeme == "struct")
+            or (tok.type == TokenType.ID and tok.lexeme in self.struct_names)
         )
 
     def parse_statement(self):
@@ -202,12 +209,27 @@ class Parser:
             var_type, name, array_size, is_array = self.parse_named_declarator(base_type)
             init = None
             if self.ts.match(TokenType.OP, "="):
-                init = self.parse_expression()
+                init = self.parse_initializer()
             decls.append(VarDecl(var_type, name, init, array_size, is_array))
             if not (self.ts.current().type == TokenType.DL and self.ts.current().lexeme == ","):
                 break
             self.ts.advance()
         return decls
+
+    def parse_initializer(self):
+        if not (self.ts.current().type == TokenType.DL and self.ts.current().lexeme == "{"):
+            return self.parse_expression()
+        self.ts.advance()
+        values = []
+        if not (self.ts.current().type == TokenType.DL and self.ts.current().lexeme == "}"):
+            values.append(self.parse_initializer())
+            while self.ts.current().type == TokenType.DL and self.ts.current().lexeme == ",":
+                self.ts.advance()
+                if self.ts.current().type == TokenType.DL and self.ts.current().lexeme == "}":
+                    break
+                values.append(self.parse_initializer())
+        self.ts.expect(TokenType.DL, "}", "初始化列表缺少 }")
+        return InitializerList(values)
 
     def parse_if(self):
         self.ts.expect(TokenType.RW, "if", "缺少 if")

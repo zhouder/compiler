@@ -1,6 +1,6 @@
 from parser.ast_nodes import (
     Program, Include, StructDef, Param, FunctionDef, Block, VarDecl, DeclStmt,
-    Assign, IfStmt, WhileStmt, ForStmt, DoWhileStmt, BreakStmt, ContinueStmt,
+    InitializerList, Assign, IfStmt, WhileStmt, ForStmt, DoWhileStmt, BreakStmt, ContinueStmt,
     ReturnStmt, ExprStmt, EmptyStmt, CallExpr, BinaryExpr, UnaryExpr, Literal,
     Identifier, ArrayAccess, MemberAccess
 )
@@ -114,12 +114,9 @@ class SemanticAnalyzer:
             raise SemanticError(f"变量不能声明为 void：{node.name}")
         if node.is_array:
             self.ensure_array_size(node)
-            if node.init is not None:
-                raise SemanticError(f"当前版本暂不支持数组初始化：{node.name}")
         self.symbols.define(node.name, self.make_symbol_info(node, kind="var"))
         if node.init is not None:
-            rhs_type = self.visit(node.init)
-            self.ensure_assignable(node.var_type, rhs_type, node.name)
+            self.ensure_initializer_compatible(node.var_type, node.is_array, node.array_size, node.init, node.name)
 
     def visit_Assign(self, node: Assign):
         lhs_type = self.lvalue_type(node.target)
@@ -253,6 +250,9 @@ class SemanticAnalyzer:
     def visit_Literal(self, node: Literal):
         return node.literal_type
 
+    def visit_InitializerList(self, node: InitializerList):
+        return "initializer_list"
+
     def visit_Identifier(self, node: Identifier):
         symbol = self.require_value_symbol(node.name)
         if symbol.get("is_array"):
@@ -347,6 +347,40 @@ class SemanticAnalyzer:
             except ValueError as exc:
                 raise SemanticError(f"数组长度非法：{node.name}") from exc
 
+    def ensure_initializer_compatible(self, decl_type, is_array, array_size, init, name):
+        if is_array:
+            if not isinstance(init, InitializerList):
+                rhs_type = self.visit(init)
+                self.ensure_assignable(decl_type, rhs_type, name)
+                return
+            if isinstance(array_size, Literal):
+                try:
+                    declared_size = int(array_size.value, 0)
+                except ValueError:
+                    declared_size = None
+                if declared_size is not None and len(init.values) > declared_size:
+                    raise SemanticError(f"数组初始化元素过多：{name}")
+            for index, value in enumerate(init.values):
+                self.ensure_single_initializer(decl_type, value, f"{name}[{index}]")
+            return
+        self.ensure_single_initializer(decl_type, init, name)
+
+    def ensure_single_initializer(self, expected_type, init, name):
+        if isinstance(init, InitializerList):
+            if not expected_type.startswith("struct "):
+                raise SemanticError(f"标量初始化不能使用列表：{name}")
+            struct_name = expected_type.split(" ", 1)[1]
+            fields = list(self.structs.get(struct_name, {}).get("fields", {}).items())
+            if not fields:
+                raise SemanticError(f"结构体未定义：{struct_name}")
+            if len(init.values) > len(fields):
+                raise SemanticError(f"结构体初始化字段过多：{name}")
+            for (field_name, field), value in zip(fields, init.values):
+                self.ensure_single_initializer(field["type"], value, f"{name}.{field_name}")
+            return
+        rhs_type = self.visit(init)
+        self.ensure_assignable(expected_type, rhs_type, name)
+
     def ensure_valid_decl_type(self, typ, name):
         base = self.base_non_pointer_type(typ)
         if base in BUILTIN_TYPES:
@@ -375,6 +409,8 @@ class SemanticAnalyzer:
         if lhs_type == "float" and rhs_type in ("int", "char"):
             return
         if lhs_type == "int" and rhs_type == "char":
+            return
+        if lhs_type == "char*" and rhs_type == "string":
             return
         if self.is_pointer(lhs_type) and rhs_type == "int":
             return
