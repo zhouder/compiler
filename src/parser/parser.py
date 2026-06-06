@@ -1,3 +1,9 @@
+"""递归下降语法分析器。
+
+本模块把词法分析得到的 Token 序列转换成 AST。表达式解析按优先级
+分层实现，语句和声明则分别由对应的 parse_xxx 方法处理。
+"""
+
 from lexer.token import TokenType
 from .token_stream import TokenStream
 from .ast_nodes import (
@@ -14,11 +20,16 @@ ASSIGN_OPS = {"=", "+=", "-=", "*=", "/=", "%="}
 
 
 class Parser:
+    """C 子集语法分析器。"""
+
     def __init__(self, tokens):
         self.ts = TokenStream(tokens)
+        # 记录已经出现过的结构体名，兼容 student a; 这种课程题目写法。
         self.struct_names = set()
 
     def parse(self):
+        """解析整个源程序。"""
+
         includes = []
         declarations = []
         while not self.ts.is_eof():
@@ -56,6 +67,8 @@ class Parser:
         )
 
     def parse_struct_def(self):
+        """解析 struct student { ... }; 结构体定义。"""
+
         self.ts.expect(TokenType.RW, "struct", "缺少 struct")
         name = self.ts.expect(TokenType.ID, message="结构体名错误").lexeme
         self.struct_names.add(name)
@@ -91,6 +104,8 @@ class Parser:
         return decls[0] if len(decls) == 1 else DeclStmt(decls)
 
     def parse_type_name(self):
+        """解析类型名，包括基本类型、struct 类型和已知结构体别名。"""
+
         tok = self.ts.current()
         if tok.type == TokenType.RW and tok.lexeme in TYPE_KEYWORDS:
             self.ts.advance()
@@ -217,6 +232,8 @@ class Parser:
         return decls
 
     def parse_initializer(self):
+        """解析普通表达式初始化或花括号初始化列表。"""
+
         if not (self.ts.current().type == TokenType.DL and self.ts.current().lexeme == "{"):
             return self.parse_expression()
         self.ts.advance()
@@ -262,6 +279,8 @@ class Parser:
         return DoWhileStmt(body, condition)
 
     def parse_for(self):
+        """解析 for(init; condition; update) body。"""
+
         self.ts.expect(TokenType.RW, "for", "缺少 for")
         self.ts.expect(TokenType.DL, "(", "缺少 (")
         init = None
@@ -296,6 +315,8 @@ class Parser:
         return self.parse_assignment()
 
     def parse_assignment(self):
+        """解析赋值表达式，复合赋值会转换成普通二元表达式。"""
+
         expr = self.parse_logical_or()
         if self.ts.current().type == TokenType.OP and self.ts.current().lexeme in ASSIGN_OPS:
             op = self.ts.advance().lexeme
@@ -362,6 +383,8 @@ class Parser:
         return self.parse_postfix()
 
     def parse_postfix(self):
+        """解析函数调用、数组下标和结构体成员访问。"""
+
         expr = self.parse_primary()
         while True:
             tok = self.ts.current()

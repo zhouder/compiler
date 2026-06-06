@@ -25,11 +25,9 @@ compiler/
 │  ├─ webapp.py              # 网页版可视化服务入口
 │  └─ web/                   # 网页前端资源
 ├─ output/                   # 运行后生成，保存各阶段输出
-├─ README.md
-└─ TEAM.md
+└─ README.md
 ```
 
-`output/` 是生成目录，可以随时清空；`__pycache__/` 也是 Python 缓存目录，不属于项目代码。
 
 ## 各阶段输入输出
 

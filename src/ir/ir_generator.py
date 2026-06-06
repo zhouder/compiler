@@ -1,3 +1,9 @@
+"""四元式中间代码生成。
+
+IR 生成器遍历 AST，把表达式、声明和控制流翻译成四元式。
+条件和循环通过 label、jz、jnz、jmp 表示，便于后续生成汇编。
+"""
+
 from parser.ast_nodes import (
     Program, Include, StructDef, FunctionDef, Block, VarDecl, DeclStmt,
     InitializerList, Assign, IfStmt, WhileStmt, ForStmt, DoWhileStmt, BreakStmt, ContinueStmt,
@@ -8,6 +14,8 @@ from .quadruple import Quadruple
 
 
 class IRGenerator:
+    """AST 到四元式的转换器。"""
+
     def __init__(self):
         self.code = []
         self.temp_id = 0
@@ -16,18 +24,26 @@ class IRGenerator:
         self.struct_fields = {}
 
     def new_temp(self):
+        """生成临时变量名，如 t1、t2。"""
+
         self.temp_id += 1
         return f"t{self.temp_id}"
 
     def new_label(self):
+        """生成控制流标签，如 L1、L2。"""
+
         self.label_id += 1
         return f"L{self.label_id}"
 
     def emit(self, op, arg1="_", arg2="_", result="_"):
+        """追加一条四元式，并返回它在列表中的位置。"""
+
         self.code.append(Quadruple(op, str(arg1), str(arg2), str(result)))
         return len(self.code) - 1
 
     def backpatch(self, indices, label):
+        """把之前暂缺的跳转目标补成真实标签。"""
+
         for idx in indices:
             self.code[idx].result = str(label)
 
@@ -74,6 +90,8 @@ class IRGenerator:
             self.visit(decl)
 
     def visit_VarDecl(self, node: VarDecl):
+        """生成变量声明四元式，并处理声明时的初始化。"""
+
         if node.is_array:
             self.emit("declarr", node.var_type, self.array_size_value(node), node.name)
         else:
@@ -82,6 +100,8 @@ class IRGenerator:
             self.emit_initializer(Identifier(node.name), node.var_type, node.is_array, node.init)
 
     def emit_initializer(self, target, target_type, is_array, init):
+        """把初始化列表展开成普通赋值四元式。"""
+
         if is_array and isinstance(init, InitializerList):
             for index, value in enumerate(init.values):
                 element = ArrayAccess(target, Literal(str(index), "int"))
@@ -102,6 +122,8 @@ class IRGenerator:
         self.store_lvalue(node.target, value)
 
     def visit_IfStmt(self, node: IfStmt):
+        """if-else 使用 jz 跳到 else 或结束标签。"""
+
         cond = self.eval_expr(node.condition)
         false_jump = self.emit("jz", cond, "_", "_")
         if node.else_branch is None:
@@ -121,6 +143,8 @@ class IRGenerator:
         self.backpatch([end_jump], end_label)
 
     def visit_WhileStmt(self, node: WhileStmt):
+        """while 循环：先判断条件，循环体末尾跳回起始标签。"""
+
         start = self.new_label()
         end = self.new_label()
         self.emit("label", "_", "_", start)
@@ -147,6 +171,8 @@ class IRGenerator:
         self.emit("label", "_", "_", end)
 
     def visit_ForStmt(self, node: ForStmt):
+        """for 循环拆成初始化、条件、循环体和更新四部分。"""
+
         start = self.new_label()
         update_label = self.new_label()
         end = self.new_label()
@@ -194,6 +220,8 @@ class IRGenerator:
             self.eval_expr(node)
 
     def eval_expr(self, node):
+        """表达式求值，返回变量名、常量或临时变量名。"""
+
         if isinstance(node, Assign):
             self.visit_Assign(node)
             return self.lvalue_ref(node.target)
@@ -261,6 +289,8 @@ class IRGenerator:
         return temp
 
     def store_lvalue(self, target, value):
+        """把计算结果写入左值，支持变量、数组、结构体字段和指针。"""
+
         if isinstance(target, Identifier):
             self.emit("=", value, "_", target.name)
             return

@@ -1,3 +1,9 @@
+"""网页版编译器服务。
+
+这是一个轻量级本地 HTTP 服务，前端页面通过接口提交源码，
+后端复用 main.py 中的编译流程并返回各阶段结果。
+"""
+
 import json
 import mimetypes
 import sys
@@ -17,11 +23,15 @@ DEFAULT_PORT = 8000
 
 
 def guess_content_type(path: Path) -> str:
+    """根据静态文件扩展名返回响应 Content-Type。"""
+
     content_type, _ = mimetypes.guess_type(str(path))
     return content_type or "application/octet-stream"
 
 
 class CompilerWebHandler(BaseHTTPRequestHandler):
+    """处理静态页面、示例源码和在线编译接口。"""
+
     server_version = "CompilerWeb/1.0"
 
     def do_GET(self):
@@ -49,6 +59,8 @@ class CompilerWebHandler(BaseHTTPRequestHandler):
         print(f"[web] {self.address_string()} - {fmt % args}")
 
     def serve_static(self, relative_path: str):
+        """安全地读取 web 目录下的静态资源。"""
+
         target = (WEB_DIR / relative_path).resolve()
         if not str(target).startswith(str(WEB_DIR.resolve())) or not target.is_file():
             self.send_error(HTTPStatus.NOT_FOUND, "Not Found")
@@ -72,6 +84,8 @@ class CompilerWebHandler(BaseHTTPRequestHandler):
         )
 
     def handle_compile(self):
+        """接收源码文本，运行编译流程，并返回 JSON 结果。"""
+
         try:
             content_length = int(self.headers.get("Content-Length", "0"))
         except ValueError:
@@ -129,6 +143,8 @@ class CompilerWebHandler(BaseHTTPRequestHandler):
 
 
 def main():
+    """启动本地 Web 服务。"""
+
     port = DEFAULT_PORT
     if len(sys.argv) >= 2:
         port = int(sys.argv[1])

@@ -1,3 +1,9 @@
+"""词法分析器。
+
+输入源码字符串，输出 Token 序列。这里采用手写扫描方式，按当前位置
+尝试匹配字符串、数字、标识符、运算符和界符。
+"""
+
 from .token import Token, TokenType
 from .token import KEYWORDS, OPERATORS, DELIMITERS
 from .matcher import (
@@ -8,6 +14,8 @@ from .matcher import (
 
 
 class Lexer:
+    """逐字符扫描源码并生成 Token。"""
+
     def __init__(self, text: str):
         self.text = text
         self.n = len(text)
@@ -22,6 +30,8 @@ class Lexer:
             self.trie.add(dl, "DL")
 
     def _advance(self, s: str):
+        """移动扫描位置，同时维护当前行号和列号。"""
+
         for ch in s:
             if ch == "\n":
                 self.line += 1
@@ -41,6 +51,8 @@ class Lexer:
         return False
 
     def _skip_comments(self):
+        """跳过 // 和 /* */ 注释；未闭合块注释会返回错误 Token。"""
+
         if self._peek(2) == "/*":
             end = self.text.find("*/", self.pos + 2)
             if end == -1:
@@ -73,6 +85,8 @@ class Lexer:
         return tok
 
     def next_token(self) -> Token:
+        """读取下一个 Token，是词法分析的主逻辑。"""
+
         progressed = True
         while progressed:
             progressed = False
@@ -99,6 +113,7 @@ class Lexer:
         candidates = []
         start = self.pos
 
+        # 同一位置可能有多种匹配结果，后面按“最长匹配”选择。
         Lf = match_float(self.text, start)
         if Lf > 0:
             candidates.append((Lf, TokenType.FLOAT))
@@ -140,6 +155,7 @@ class Lexer:
         L, ttype = max(candidates, key=pri)
         lex = self.text[self.pos:self.pos + L]
 
+        # 对 0x、八进制和数字后接字母的情况做额外错误识别。
         if ttype == TokenType.NUM10 and lex == '0':
             j = self.pos + 1
             if j < self.n and self.text[j] in ('x', 'X'):

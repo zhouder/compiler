@@ -1,3 +1,4 @@
+// 前端交互脚本：负责载入示例、提交源码、切换阶段输出。
 const STAGE_LABELS = {
   TOKENS: "TOKENS",
   AST: "AST",
@@ -21,11 +22,13 @@ let currentSections = {};
 let currentStage = "TOKENS";
 
 function setStatus(kind, text) {
+  // kind 对应 CSS 中的 idle/running/success/error 状态。
   statusBadge.className = `status-badge ${kind}`;
   statusBadge.textContent = text;
 }
 
 function renderTabs() {
+  // 根据后端返回的阶段列表动态生成标签页。
   stageTabs.innerHTML = "";
   Object.keys(currentSections).forEach((key) => {
     const node = stageTabTemplate.content.firstElementChild.cloneNode(true);
@@ -54,6 +57,7 @@ async function loadExample() {
 }
 
 async function compileSource() {
+  // 将当前编辑器内容提交给本地后端，由 Python 编译器完成分析。
   const source = sourceEditor.value;
   const filename = filenameInput.value.trim() || "playground.c";
 

@@ -1,7 +1,15 @@
+"""Token 流工具。
+
+递归下降分析器需要频繁查看当前 Token、向前看若干 Token、
+消费 Token，并在不符合预期时给出带行列号的语法错误。
+"""
+
 from lexer.token import TokenType
 
 
 class TokenStream:
+    """对 Token 序列做一层轻量封装，减少 Parser 中的下标操作。"""
+
     def __init__(self, tokens):
         self.tokens = tokens
         self.index = 0
@@ -31,6 +39,8 @@ class TokenStream:
         return True
 
     def expect(self, token_type=None, lexeme=None, message="语法错误"):
+        """要求当前位置必须匹配指定 Token，否则抛出 SyntaxError。"""
+
         tok = self.current()
         if token_type is not None and tok.type != token_type:
             raise SyntaxError(f"{message}：第 {tok.line} 行第 {tok.col} 列，得到 {tok}")

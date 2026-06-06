@@ -1,3 +1,9 @@
+"""桌面可视化界面。
+
+界面基于 tkinter，主要用于课堂展示：左侧编辑 C 子集源码，右侧查看
+词法、AST、语义、IR 和 ASM 各阶段结果。
+"""
+
 import sys
 import re
 import tkinter as tk
@@ -55,10 +61,14 @@ SYNTAX_RULES = {
 }
 
 def choose_font(candidates, fallback):
+    """从候选字体中选择当前系统可用的字体。"""
+
     families = set(tkfont.families())
     return next((name for name in candidates if name in families), fallback)
 
 class FontSet:
+    """集中管理界面字体，方便统一调整字号。"""
+
     def __init__(self):
         ui = choose_font(("Segoe UI", "Microsoft YaHei UI", "Arial"), "sans-serif")
         mono = choose_font(("Consolas", "Cascadia Code", "JetBrains Mono", "Courier New"), "monospace")
@@ -69,6 +79,8 @@ class FontSet:
         self.code_small = (mono, 10)
 
 class ModernButton(tk.Frame):
+    """自绘按钮，用于统一主按钮和次按钮样式。"""
+
     def __init__(self, parent, text, command, fonts, primary=False):
         self.primary = primary
         self.bg_color = COLOR["accent"] if primary else COLOR["button_bg"]

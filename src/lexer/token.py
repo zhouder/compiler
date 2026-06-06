@@ -1,8 +1,16 @@
+"""Token 定义。
+
+词法分析阶段只产出 Token，不关心后续语法结构。本文件集中维护
+Token 类型、关键字表、运算符表和界符表。
+"""
+
 from dataclasses import dataclass
 from enum import Enum, auto
 
 
 class TokenType(Enum):
+    """词法单元分类。输出时使用枚举名，便于和课程设计表格对应。"""
+
     RW = auto()
     ID = auto()
     NUM10 = auto()
@@ -37,6 +45,8 @@ TYPE_CN = {
 
 @dataclass
 class Token:
+    """源码中的一个词法单元，记录类型、原始文本和行列位置。"""
+
     type: TokenType
     lexeme: str
     line: int

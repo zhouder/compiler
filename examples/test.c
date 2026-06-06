@@ -1,3 +1,4 @@
+/* 课程设计题目 1 示例：结构体数组、初始化列表和 if-else 翻译。 */
 struct student {
     char* name;
     int num;
@@ -8,7 +9,7 @@ struct student {
 void main() {
     int i, num_140 = 0;
     float sum = 0;
-    student sts[2] = {
+    struct student sts[2] = {
         {"Li ping", 5, 18, 145.0},
         {"Wang ming", 6, 18, 150.0}
     };

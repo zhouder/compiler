@@ -1,10 +1,20 @@
+"""目标汇编代码生成。
+
+本模块把四元式翻译成 ML615/MASM 风格的 16 位 DOS 汇编。
+为了让课程设计演示更直观，变量和结构体字段都放在数据段中管理。
+"""
+
 class CodeGenerator:
+    """四元式到汇编文本的转换器。"""
+
     WORD_SIZE = 2
 
     def __init__(self):
         self.reset()
 
     def reset(self):
+        """初始化一次生成过程中的符号缓存和输出缓冲。"""
+
         self.struct_fields = {}
         self.func_params = {}
         self.func_returns = {}
@@ -21,6 +31,8 @@ class CodeGenerator:
         self.pending_printf = None
 
     def generate(self, ir_list):
+        """代码生成入口，返回完整 ASM 文本。"""
+
         self.reset()
         self.collect_metadata(ir_list)
         self.collect_storage(ir_list)
@@ -49,6 +61,8 @@ class CodeGenerator:
         return "\n".join(out)
 
     def collect_metadata(self, ir_list):
+        """预扫描结构体和函数信息，供后续分配存储和传参使用。"""
+
         current_struct = None
         current_func = None
         for q in ir_list:
@@ -72,6 +86,8 @@ class CodeGenerator:
                 current_func = None
 
     def collect_storage(self, ir_list):
+        """根据声明和临时变量提前生成数据段定义。"""
+
         current_func = None
         for q in ir_list:
             if q.op == "func":
@@ -124,6 +140,8 @@ class CodeGenerator:
             self.declare_word(self.field_symbol(func, name, field["name"]), f"{typ}.{field['name']}")
 
     def declare_struct_array(self, func, typ, name, size):
+        """为结构体数组的每个元素字段分配独立存储。"""
+
         struct_name = typ.split(" ", 1)[1]
         fields = self.struct_fields.get(struct_name, [])
         size = int(self.integer_literal(size))
@@ -151,6 +169,8 @@ class CodeGenerator:
         self.data_defs.append(f"{name} DW {size} DUP (?) ; {comment}[]")
 
     def emit_code(self, ir_list):
+        """逐条翻译四元式为汇编指令。"""
+
         self.current_func = None
         for q in ir_list:
             op, a1, a2, res = q.op, q.arg1, q.arg2, q.result
@@ -246,6 +266,8 @@ class CodeGenerator:
                 self.line(f"    ; unsupported {op} {a1} {a2} {res}")
 
     def emit_arithmetic(self, op, left, right, result):
+        """生成整数算术运算代码。"""
+
         if op == "+":
             self.load_ax(left)
             self.line(f"    ADD AX, {self.source_ref(right)}")
@@ -274,6 +296,8 @@ class CodeGenerator:
             self.store_ax(result)
 
     def emit_compare(self, op, left, right, result):
+        """比较表达式统一生成 0/1 结果。"""
+
         true_label = self.new_internal_label("CMP_TRUE")
         end_label = self.new_internal_label("CMP_END")
         jump_map = {
@@ -341,6 +365,8 @@ class CodeGenerator:
         self.line(f"{end_label}:")
 
     def load_array_element(self, array_name, index):
+        """读取数组元素，普通数组和数组参数的寻址方式不同。"""
+
         self.emit_index_to_bx(index)
         base = self.memory_ref(array_name)
         if base in self.array_params:
@@ -368,6 +394,8 @@ class CodeGenerator:
         self.line("    SHL BX, 1")
 
     def emit_print(self, value):
+        """处理 printf 的格式串和对应输出值。"""
+
         if self.is_string_literal(value):
             text = self.decode_string(value)
             segments = self.parse_format(text)
@@ -433,6 +461,11 @@ class CodeGenerator:
         self.store_ax(target)
 
     def emit_call(self, callee, argc, result):
+        """生成普通函数调用代码。
+
+        本课程设计没有实现完整栈帧，参数通过函数对应的数据区变量传递。
+        """
+
         args = [value for _, value in sorted(self.pending_args, key=lambda item: item[0])]
         params = self.func_params.get(callee, [])
         for param, arg in zip(params, args):
@@ -486,6 +519,8 @@ class CodeGenerator:
         return self.memory_ref(value)
 
     def memory_ref(self, value):
+        """把 IR 中的变量名、字段名或临时变量名转换成汇编符号。"""
+
         if value == "_":
             return value
         if self.is_temp(value):
@@ -643,6 +678,8 @@ class CodeGenerator:
         self.code_lines.append(text)
 
     def runtime_library(self):
+        """内置的 DOS 输出/输入运行时过程。"""
+
         return [
             "",
             "PRINT_STR PROC",

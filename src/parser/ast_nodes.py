@@ -1,13 +1,23 @@
+"""抽象语法树节点定义。
+
+语法分析阶段只负责把 Token 组织成这些节点；语义检查、IR 生成和
+代码生成都以 AST 为输入继续处理。
+"""
+
 from dataclasses import dataclass, field
 from typing import Any, List, Optional
 
 
 class ASTNode:
+    """所有 AST 节点的公共基类。"""
+
     pass
 
 
 @dataclass
 class Program(ASTNode):
+    """整个源程序，包括 include 和外部声明。"""
+
     includes: List["Include"]
     declarations: List[ASTNode]
 
@@ -65,6 +75,8 @@ class DeclStmt(ASTNode):
 
 @dataclass
 class InitializerList(ASTNode):
+    """C 风格初始化列表，如 {1, 2} 或 {{...}, {...}}。"""
+
     values: List[ASTNode]
 
 
@@ -76,6 +88,8 @@ class Assign(ASTNode):
 
 @dataclass
 class IfStmt(ASTNode):
+    """if-else 语句节点，else 分支可以为空。"""
+
     condition: ASTNode
     then_branch: ASTNode
     else_branch: Optional[ASTNode] = None
@@ -134,6 +148,8 @@ class CallExpr(ASTNode):
 
 @dataclass
 class BinaryExpr(ASTNode):
+    """二元表达式，例如 a + b、x < y。"""
+
     operator: str
     left: ASTNode
     right: ASTNode

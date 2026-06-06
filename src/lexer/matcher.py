@@ -1,3 +1,9 @@
+"""词法匹配辅助函数。
+
+Lexer 会反复从当前位置尝试匹配数字、标识符、字符串、运算符等。
+这些函数只返回匹配长度，不直接创建 Token。
+"""
+
 from typing import Tuple
 
 WHITESPACE = set(" \t\r\n\f\v")
@@ -49,6 +55,8 @@ def match_identifier(text: str, pos: int) -> int:
 
 
 def match_float(text: str, pos: int) -> int:
+    """匹配形如 12.3 或 12.3e-2 的浮点常量。"""
+
     n = len(text)
     i = pos
     if i >= n or not is_digit(text[i]):
@@ -125,6 +133,11 @@ def match_string_or_char(text: str, pos: int) -> Tuple[int, bool, bool]:
 
 
 class Trie:
+    """用于运算符和界符的最长匹配。
+
+    例如先读到 '<' 时，还需要继续判断是不是 '<=' 或 '<<='。
+    """
+
     def __init__(self):
         self.root = {"next": {}}
 

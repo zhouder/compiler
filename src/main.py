@@ -1,3 +1,9 @@
+"""编译流程入口。
+
+本文件负责把词法、语法、语义、中间代码和目标代码几个阶段串起来，
+同时把每个阶段的结果保存到 output 目录，便于调试和答辩展示。
+"""
+
 import sys
 from dataclasses import dataclass
 from pathlib import Path
@@ -21,6 +27,8 @@ OUTPUT_DIR = PROJECT_ROOT / "output"
 
 @dataclass
 class CompileResult:
+    """一次编译运行的汇总结果，供命令行、GUI 和 Web 入口复用。"""
+
     ok: bool
     source_path: Path
     sections: list
@@ -30,6 +38,8 @@ class CompileResult:
 
 
 def resolve_source_path(path: str) -> Path:
+    """把用户输入的相对路径转换为实际源码路径。"""
+
     source_path = Path(path)
     if source_path.is_absolute():
         return source_path
@@ -42,11 +52,15 @@ def resolve_source_path(path: str) -> Path:
 
 
 def sanitize_output_stem(stem: str) -> str:
+    """生成安全的输出文件名前缀，避免特殊字符影响 DOS 工具。"""
+
     safe = "".join(ch for ch in stem if ch.isalnum() or ch in ("_", "-")).strip("._-")
     return safe or "playground"
 
 
 def write_outputs(source_path: Path, stage_outputs, sections):
+    """把各阶段输出写入 output，并额外生成完整日志文件。"""
+
     OUTPUT_DIR.mkdir(exist_ok=True)
     stem = sanitize_output_stem(source_path.stem)
     for suffix, content in stage_outputs.items():
@@ -67,9 +81,12 @@ def _fail_result(source_path: Path, stage_outputs, sections, title: str, message
 
 
 def run_pipeline_from_text(source: str, source_path: Path) -> CompileResult:
+    """对一段源码文本执行完整编译流程。"""
+
     sections = []
     stage_outputs = {}
 
+    # 词法阶段只负责切分 Token；发现 ERROR Token 后不再继续向后分析。
     lexer = Lexer(source)
     tokens = lexer.tokenize()
 

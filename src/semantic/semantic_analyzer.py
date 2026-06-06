@@ -1,3 +1,9 @@
+"""语义分析器。
+
+语法分析只保证结构合法，语义分析继续检查变量、函数、类型、
+结构体字段、数组下标和控制流使用是否合理。
+"""
+
 from parser.ast_nodes import (
     Program, Include, StructDef, Param, FunctionDef, Block, VarDecl, DeclStmt,
     InitializerList, Assign, IfStmt, WhileStmt, ForStmt, DoWhileStmt, BreakStmt, ContinueStmt,
@@ -12,6 +18,8 @@ BUILTIN_TYPES = NUMERIC_TYPES | {"void"}
 
 
 class SemanticAnalyzer:
+    """遍历 AST 并完成语义检查。"""
+
     def __init__(self):
         self.symbols = SymbolTable()
         self.structs = {}
@@ -20,6 +28,8 @@ class SemanticAnalyzer:
         self.loop_depth = 0
 
     def analyze(self, node):
+        """语义分析入口，返回最终符号表。"""
+
         self.visit(node)
         return self.symbols
 
@@ -30,6 +40,8 @@ class SemanticAnalyzer:
         return method(node)
 
     def visit_Program(self, node: Program):
+        """先登记结构体和函数，再分析变量和函数体。"""
+
         for item in node.declarations:
             if isinstance(item, StructDef):
                 self.register_struct(item)
@@ -47,6 +59,8 @@ class SemanticAnalyzer:
         return None
 
     def register_struct(self, node: StructDef):
+        """登记结构体字段，后续成员访问要依赖这些信息。"""
+
         if node.name in self.structs:
             raise SemanticError(f"重复定义结构体：{node.name}")
         fields = {}
@@ -58,6 +72,8 @@ class SemanticAnalyzer:
         self.structs[node.name] = {"kind": "struct", "fields": fields}
 
     def register_function(self, node: FunctionDef):
+        """登记函数签名，便于函数调用时检查参数。"""
+
         if node.name in self.functions:
             raise SemanticError(f"重复定义函数：{node.name}")
         self.ensure_valid_return_type(node.return_type, node.name)
@@ -82,6 +98,8 @@ class SemanticAnalyzer:
         return None
 
     def visit_FunctionDef(self, node: FunctionDef):
+        """进入函数作用域，登记参数并检查函数体。"""
+
         previous_return_type = self.current_return_type
         self.current_return_type = node.return_type
         self.symbols.push()
@@ -109,6 +127,8 @@ class SemanticAnalyzer:
             self.visit(decl)
 
     def visit_VarDecl(self, node: VarDecl):
+        """检查变量声明和初始化表达式。"""
+
         self.ensure_valid_decl_type(node.var_type, node.name)
         if node.var_type == "void":
             raise SemanticError(f"变量不能声明为 void：{node.name}")
@@ -119,6 +139,8 @@ class SemanticAnalyzer:
             self.ensure_initializer_compatible(node.var_type, node.is_array, node.array_size, node.init, node.name)
 
     def visit_Assign(self, node: Assign):
+        """检查赋值左值是否合法，以及左右类型是否兼容。"""
+
         lhs_type = self.lvalue_type(node.target)
         rhs_type = self.visit(node.value)
         self.ensure_assignable(lhs_type, rhs_type, self.describe_lvalue(node.target))
@@ -143,6 +165,8 @@ class SemanticAnalyzer:
         self.ensure_condition(node.condition, "do-while")
 
     def visit_ForStmt(self, node: ForStmt):
+        """for 的初始化变量只在当前循环作用域中有效。"""
+
         self.symbols.push()
         if node.init is not None:
             self.visit(node.init)
@@ -183,6 +207,8 @@ class SemanticAnalyzer:
         return "void"
 
     def visit_CallExpr(self, node: CallExpr):
+        """检查内置输入输出函数和普通函数调用。"""
+
         if node.callee == "printf":
             if not node.args:
                 raise SemanticError("printf 至少需要一个格式字符串参数")
@@ -269,6 +295,8 @@ class SemanticAnalyzer:
         return self.strip_pointer(array_type)
 
     def visit_MemberAccess(self, node: MemberAccess):
+        """检查结构体成员是否存在，并返回字段类型。"""
+
         struct_name = self.member_struct_name(node)
         fields = self.structs[struct_name]["fields"]
         if node.member not in fields:
@@ -279,6 +307,8 @@ class SemanticAnalyzer:
         return field["type"]
 
     def lvalue_type(self, node, allow_array_name=False):
+        """判断一个节点能否作为赋值目标，并返回其类型。"""
+
         if isinstance(node, Identifier):
             symbol = self.require_value_symbol(node.name)
             if symbol.get("is_array") and not allow_array_name:
@@ -348,6 +378,8 @@ class SemanticAnalyzer:
                 raise SemanticError(f"数组长度非法：{node.name}") from exc
 
     def ensure_initializer_compatible(self, decl_type, is_array, array_size, init, name):
+        """检查声明初始化是否匹配变量类型，支持结构体数组初始化。"""
+
         if is_array:
             if not isinstance(init, InitializerList):
                 rhs_type = self.visit(init)
@@ -366,6 +398,8 @@ class SemanticAnalyzer:
         self.ensure_single_initializer(decl_type, init, name)
 
     def ensure_single_initializer(self, expected_type, init, name):
+        """检查单个元素初始化，结构体初始化会按字段顺序展开。"""
+
         if isinstance(init, InitializerList):
             if not expected_type.startswith("struct "):
                 raise SemanticError(f"标量初始化不能使用列表：{name}")
@@ -404,6 +438,8 @@ class SemanticAnalyzer:
         raise SemanticError(f"{name} 必须是标量类型，得到 {typ}")
 
     def ensure_assignable(self, lhs_type, rhs_type, name):
+        """判断右侧类型能否赋给左侧类型。"""
+
         if lhs_type == rhs_type:
             return
         if lhs_type == "float" and rhs_type in ("int", "char"):
