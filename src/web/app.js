@@ -13,6 +13,7 @@ const filenameInput = document.getElementById("filename-input");
 const compileBtn = document.getElementById("compile-btn");
 const loadExampleBtn = document.getElementById("load-example-btn");
 const outputViewer = document.getElementById("output-viewer");
+const lineNumbers = document.getElementById("line-numbers");
 const stageTabs = document.getElementById("stage-tabs");
 const statusBadge = document.getElementById("status-badge");
 const artifactHint = document.getElementById("artifact-hint");
@@ -25,6 +26,16 @@ function setStatus(kind, text) {
   // kind 对应 CSS 中的 idle/running/success/error 状态。
   statusBadge.className = `status-badge ${kind}`;
   statusBadge.textContent = text;
+}
+
+function setBusy(isBusy) {
+  compileBtn.disabled = isBusy;
+  loadExampleBtn.disabled = isBusy;
+}
+
+function updateLineNumbers() {
+  const lines = Math.max(1, sourceEditor.value.split("\n").length);
+  lineNumbers.textContent = Array.from({ length: lines }, (_, index) => index + 1).join("\n");
 }
 
 function renderTabs() {
@@ -48,12 +59,18 @@ function renderOutput() {
 }
 
 async function loadExample() {
+  setBusy(true);
   setStatus("running", "载入中");
-  const response = await fetch("/api/example");
-  const payload = await response.json();
-  filenameInput.value = payload.filename;
-  sourceEditor.value = payload.source;
-  setStatus("idle", "已载入");
+  try {
+    const response = await fetch("/api/example");
+    const payload = await response.json();
+    filenameInput.value = payload.filename;
+    sourceEditor.value = payload.source;
+    updateLineNumbers();
+    setStatus("idle", "已载入");
+  } finally {
+    setBusy(false);
+  }
 }
 
 async function compileSource() {
@@ -61,35 +78,40 @@ async function compileSource() {
   const source = sourceEditor.value;
   const filename = filenameInput.value.trim() || "playground.c";
 
+  setBusy(true);
   setStatus("running", "编译中");
   artifactHint.textContent = "running";
 
-  const response = await fetch("/api/compile", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({ source, filename }),
-  });
+  try {
+    const response = await fetch("/api/compile", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ source, filename }),
+    });
 
-  const payload = await response.json();
-  if (!response.ok) {
-    currentSections = { ERROR: payload.error || "请求失败" };
-    currentStage = "ERROR";
+    const payload = await response.json();
+    if (!response.ok) {
+      currentSections = { ERROR: payload.error || "请求失败" };
+      currentStage = "ERROR";
+      renderTabs();
+      renderOutput();
+      setStatus("error", "失败");
+      artifactHint.textContent = "request failed";
+      return;
+    }
+
+    currentSections = payload.sections || {};
+    currentStage = payload.ok ? "TOKENS" : (currentSections.ERROR ? "ERROR" : "SEMANTIC");
     renderTabs();
     renderOutput();
-    setStatus("error", "失败");
-    artifactHint.textContent = "request failed";
-    return;
+
+    setStatus(payload.ok ? "success" : "error", payload.ok ? "编译成功" : "编译失败");
+    artifactHint.textContent = payload.outputDir || "output/";
+  } finally {
+    setBusy(false);
   }
-
-  currentSections = payload.sections || {};
-  currentStage = payload.ok ? "TOKENS" : (currentSections.ERROR ? "ERROR" : "SEMANTIC");
-  renderTabs();
-  renderOutput();
-
-  setStatus(payload.ok ? "success" : "error", payload.ok ? "编译成功" : "编译失败");
-  artifactHint.textContent = payload.outputDir || "output/";
 }
 
 compileBtn.addEventListener("click", () => {
@@ -110,12 +132,23 @@ loadExampleBtn.addEventListener("click", () => {
   });
 });
 
+sourceEditor.addEventListener("input", updateLineNumbers);
+sourceEditor.addEventListener("scroll", () => {
+  lineNumbers.scrollTop = sourceEditor.scrollTop;
+});
+
 currentSections = {
-  TOKENS: "点击“载入示例”或直接输入源码，然后开始编译。",
-  AST: "AST 将显示在这里。",
-  SEMANTIC: "语义分析结果将显示在这里。",
-  IR: "中间代码将显示在这里。",
-  ASM: "目标汇编代码将显示在这里。",
+  TOKENS: "尚未生成词法分析结果。",
+  AST: "尚未生成抽象语法树。",
+  SEMANTIC: "尚未生成语义分析结果。",
+  IR: "尚未生成中间代码。",
+  ASM: "尚未生成汇编代码。",
 };
+sourceEditor.value = "";
+updateLineNumbers();
 renderTabs();
 renderOutput();
+loadExample().catch((error) => {
+  setStatus("error", "失败");
+  artifactHint.textContent = String(error);
+});

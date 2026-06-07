@@ -1,4 +1,4 @@
-﻿# compiler
+﻿# Compiler
 
 一个面向 C 子集的编译原理课程设计项目。项目主流程为：
 
@@ -177,13 +177,13 @@ cd output
 使用 ML615 汇编：
 
 ```powershell
-D:\Assembly\ML615\ml.exe /c test.asm
+masm test.asm
 ```
 
 链接生成 EXE：
 
 ```powershell
-D:\Assembly\ML615\link.exe test.obj;
+link test.obj;
 ```
 
 生成的文件位于 `output/`：
@@ -194,14 +194,17 @@ test.obj
 test.exe
 ```
 
-如果系统大小写显示成 `TEST.OBJ`、`TEST.EXE` 也正常，Windows 文件名不区分大小写。
+
 
 16 位 DOS 程序通常不能直接在 64 位 Windows 终端运行，需要用 DOSBox。可以手动打开 DOSBox 后挂载 `output` 目录，例如：
 
 ```bat
-mount c D:\study\编译原理\编译原理课程设计\compiler\output
+mount w D:\Assembly
+mount c D:\compiler\output
+set PATH=w:\;%PATH%
 c:
-test.exe
+masm test.asm
+link test.obj;
+test
 ```
 
-如果 DOSBox 不支持中文路径，建议把 `output` 里的 `test.exe` 临时复制到纯英文路径，例如 `D:\asmrun`，再挂载运行。

@@ -1,4 +1,3 @@
-/* 课程设计题目 1 示例：结构体数组、初始化列表和 if-else 翻译。 */
 struct student {
     char* name;
     int num;
