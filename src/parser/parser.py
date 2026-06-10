@@ -410,6 +410,9 @@ class Parser:
                 member = self.ts.expect(TokenType.ID, message="成员名错误").lexeme
                 expr = MemberAccess(expr, member, True)
                 continue
+            if tok.type == TokenType.OP and tok.lexeme in ("++", "--"):
+                op = self.ts.advance().lexeme
+                return UnaryExpr(op, expr)
             break
         return expr
 

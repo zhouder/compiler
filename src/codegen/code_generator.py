@@ -70,7 +70,11 @@ class CodeGenerator:
                 current_struct = q.arg1
                 self.struct_fields[current_struct] = []
             elif q.op == "structfield" and current_struct:
-                self.struct_fields[current_struct].append({"type": q.arg1, "name": q.result})
+                self.struct_fields[current_struct].append({
+                    "type": q.arg1,
+                    "name": q.result,
+                    "array_size": None if q.arg2 == "_" else q.arg2,
+                })
             elif q.op == "endstruct":
                 current_struct = None
             elif q.op == "func":
@@ -137,7 +141,7 @@ class CodeGenerator:
             self.declare_word(self.scoped_name(func, name), typ)
             return
         for field in fields:
-            self.declare_word(self.field_symbol(func, name, field["name"]), f"{typ}.{field['name']}")
+            self.declare_struct_field_storage(func, name, typ, field)
 
     def declare_struct_array(self, func, typ, name, size):
         """为结构体数组的每个元素字段分配独立存储。"""
@@ -151,7 +155,16 @@ class CodeGenerator:
         for index in range(size):
             element = f"{name}[{index}]"
             for field in fields:
-                self.declare_word(self.field_symbol(func, element, field["name"]), f"{typ}[{index}].{field['name']}")
+                self.declare_struct_field_storage(func, element, f"{typ}[{index}]", field)
+
+    def declare_struct_field_storage(self, func, base_name, owner_desc, field):
+        symbol = self.field_symbol(func, base_name, field["name"])
+        comment = f"{owner_desc}.{field['name']}"
+        array_size = field.get("array_size")
+        if array_size not in (None, "_"):
+            self.declare_array(symbol, array_size, comment)
+            return
+        self.declare_word(symbol, comment)
 
     def declare_word(self, name, comment="word"):
         name = self.safe(name)
@@ -215,6 +228,11 @@ class CodeGenerator:
                 self.store_ax(res)
             elif op == "u!":
                 self.emit_not(a1, res)
+            elif op in ("u++", "u--"):
+                self.load_ax(a1)
+                self.line("    INC AX" if op == "u++" else "    DEC AX")
+                self.store_ax(a1)
+                self.store_ax(res)
             elif op == "addr":
                 self.line(f"    LEA AX, {self.memory_ref(a1)}")
                 self.store_ax(res)

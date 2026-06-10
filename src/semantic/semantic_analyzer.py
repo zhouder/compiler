@@ -410,7 +410,13 @@ class SemanticAnalyzer:
             if len(init.values) > len(fields):
                 raise SemanticError(f"结构体初始化字段过多：{name}")
             for (field_name, field), value in zip(fields, init.values):
-                self.ensure_single_initializer(field["type"], value, f"{name}.{field_name}")
+                self.ensure_initializer_compatible(
+                    field["type"],
+                    field.get("is_array", False),
+                    field.get("array_size"),
+                    value,
+                    f"{name}.{field_name}",
+                )
             return
         rhs_type = self.visit(init)
         self.ensure_assignable(expected_type, rhs_type, name)
