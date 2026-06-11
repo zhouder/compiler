@@ -7,6 +7,7 @@
 import sys
 import re
 import tkinter as tk
+import ctypes
 from pathlib import Path
 from tkinter import filedialog, font as tkfont, messagebox, ttk
 
@@ -34,23 +35,23 @@ EMPTY_OUTPUT = {
 
 # 轻量 IDE 风格配色，减少大面积高饱和渐变和系统默认控件感。
 COLOR = {
-    "app_bg": "#0f131a",
-    "panel_bg": "#151a22",
-    "panel_alt": "#1a202b",
-    "code_bg": "#0b1018",
-    "border": "#273142",
-    "border_soft": "#202838",
-    "text": "#e5edf5",
-    "text_ui": "#d7dee8",
-    "muted": "#8d98a8",
-    "accent": "#2fbf9f",
-    "accent_hover": "#35d0ad",
-    "accent_blue": "#5aa2ff",
-    "selection": "#203a52",
-    "button_bg": "#1d2531",
-    "button_hover": "#263241",
-    "tab_active": "#202838",
-    "tab_inactive": "#151a22",
+    "app_bg": "#090d14",
+    "panel_bg": "#111722",
+    "panel_alt": "#161d29",
+    "code_bg": "#070c13",
+    "border": "#2a3648",
+    "border_soft": "#1d2735",
+    "text": "#edf4fb",
+    "text_ui": "#dce6f2",
+    "muted": "#8f9bae",
+    "accent": "#42d6b4",
+    "accent_hover": "#56e7c5",
+    "accent_blue": "#68a8ff",
+    "selection": "#1d3f5c",
+    "button_bg": "#192333",
+    "button_hover": "#243246",
+    "tab_active": "#1c2636",
+    "tab_inactive": "#111722",
     
     # 语法高亮颜色
     "syn_keyword": "#569cd6",    # 蓝色 (if, while)
@@ -78,18 +79,31 @@ def choose_font(candidates, fallback):
     families = set(tkfont.families())
     return next((name for name in candidates if name in families), fallback)
 
+def enable_high_dpi():
+    """Opt in to sharper text on Windows high-DPI displays."""
+
+    try:
+        ctypes.windll.shcore.SetProcessDpiAwareness(1)
+    except (AttributeError, OSError, tk.TclError):
+        try:
+            ctypes.windll.user32.SetProcessDPIAware()
+        except (AttributeError, OSError, tk.TclError):
+            pass
+
 class FontSet:
     """集中管理界面字体，方便统一调整字号。"""
 
     def __init__(self):
         ui = choose_font(("Segoe UI", "Microsoft YaHei UI", "Arial"), "sans-serif")
         mono = choose_font(("Consolas", "Cascadia Code", "JetBrains Mono", "Courier New"), "monospace")
-        self.hero = (ui, 13, "bold")
-        self.ui = (ui, 10)
-        self.small = (ui, 9)
-        self.label = (ui, 9, "bold")
-        self.code = (mono, 11)
-        self.code_small = (mono, 10)
+        self.mono_family = mono
+        self.hero = (ui, 19, "bold")
+        self.ui = (ui, 15)
+        self.small = (ui, 13)
+        self.label = (ui, 15, "bold")
+        self.code = (mono, 18)
+        self.code_small = (mono, 15)
+        self.code_large = (mono, 22)
 
 class ModernButton(tk.Frame):
     """自绘按钮，用于统一主按钮和次按钮样式。"""
@@ -117,8 +131,8 @@ class ModernButton(tk.Frame):
             bg=self.bg_color,
             fg=self.fg_color,
             font=fonts.ui,
-            padx=15,
-            pady=7,
+            padx=28,
+            pady=13,
         )
         self.label.pack(fill=tk.BOTH, expand=True)
         
@@ -151,8 +165,8 @@ class EditorTab(tk.Frame):
             bg=COLOR["tab_inactive"],
             fg=COLOR["muted"],
             font=fonts.ui,
-            padx=14,
-            pady=8,
+            padx=24,
+            pady=14,
         )
         self.indicator = tk.Frame(self, height=3, bg=COLOR["tab_inactive"])
         
@@ -197,7 +211,7 @@ class ModernCodeBox(tk.Frame):
 
         self.line_numbers = None
         if not readonly:
-            self.line_numbers = tk.Canvas(self, width=50, bg=COLOR["code_bg"], highlightthickness=0, bd=0)
+            self.line_numbers = tk.Canvas(self, width=76, bg=COLOR["code_bg"], highlightthickness=0, bd=0)
             self.line_numbers.grid(row=0, column=0, sticky="ns")
 
         self.text = tk.Text(
@@ -207,7 +221,7 @@ class ModernCodeBox(tk.Frame):
             selectbackground=COLOR["selection"],     
             selectforeground=COLOR["text"],
             relief=tk.FLAT, bd=0, highlightthickness=0,
-            padx=14, pady=12,
+            padx=24, pady=20,
             font=fonts.code
         )
         
@@ -296,7 +310,7 @@ class ModernCodeBox(tk.Frame):
             line_no = index.split(".")[0]
             # 行号颜色微调，更符合 IDE
             self.line_numbers.create_text(
-                38, y, anchor="ne", text=line_no,
+                58, y, anchor="ne", text=line_no,
                 fill=COLOR["muted"], font=self.fonts.code_small
             )
             index = self.text.index(f"{index}+1line")
@@ -314,6 +328,9 @@ class CompilerGUI:
         self.stage_outputs = EMPTY_OUTPUT.copy()
         self.stage_tabs = {}
         self.current_stage = "TOKENS"
+        self.fullscreen_window = None
+        self.fullscreen_viewer = None
+        self.fullscreen_title_var = tk.StringVar()
         
         self.status_var = tk.StringVar(value="就绪")
 
@@ -351,7 +368,7 @@ class CompilerGUI:
 
     def build_layout(self):
         # --- 顶部工具栏 ---
-        toolbar = tk.Frame(self.root, bg=COLOR["panel_bg"], height=62)
+        toolbar = tk.Frame(self.root, bg=COLOR["panel_bg"], height=94)
         toolbar.pack(side=tk.TOP, fill=tk.X)
         toolbar.pack_propagate(False)
 
@@ -387,7 +404,7 @@ class CompilerGUI:
             highlightthickness=1,
             highlightbackground=COLOR["border"],
         )
-        editor_header = tk.Frame(left_panel, bg=COLOR["panel_bg"], height=46)
+        editor_header = tk.Frame(left_panel, bg=COLOR["panel_bg"], height=68)
         editor_header.pack(side=tk.TOP, fill=tk.X)
         editor_header.pack_propagate(False)
         
@@ -397,7 +414,7 @@ class CompilerGUI:
             bg=COLOR["panel_bg"],
             fg=COLOR["text"],
             font=self.fonts.label,
-        ).pack(side=tk.LEFT, padx=(14, 8))
+        ).pack(side=tk.LEFT, padx=(18, 10))
         self.file_lbl = tk.Label(editor_header, text="未命名文件.c", bg=COLOR["panel_bg"],
                                  fg=COLOR["muted"], font=self.fonts.small)
         self.file_lbl.pack(side=tk.LEFT)
@@ -413,7 +430,7 @@ class CompilerGUI:
             highlightbackground=COLOR["border"],
         )
         
-        tabs_header = tk.Frame(right_panel, bg=COLOR["panel_bg"], height=46)
+        tabs_header = tk.Frame(right_panel, bg=COLOR["panel_bg"], height=68)
         tabs_header.pack(side=tk.TOP, fill=tk.X)
         tabs_header.pack_propagate(False)
         
@@ -424,7 +441,8 @@ class CompilerGUI:
             tab.pack(side=tk.LEFT, padx=(0, 2), fill=tk.Y)
             self.stage_tabs[key] = tab
             
-        ModernButton(tabs_header, "复制", self.copy_current_output, self.fonts).pack(side=tk.RIGHT, padx=10, pady=7)
+        ModernButton(tabs_header, "复制", self.copy_current_output, self.fonts).pack(side=tk.RIGHT, padx=(8, 12), pady=8)
+        ModernButton(tabs_header, "全屏", self.open_output_fullscreen, self.fonts).pack(side=tk.RIGHT, padx=(0, 0), pady=8)
 
         self.output_viewer = ModernCodeBox(right_panel, self.fonts, readonly=True, enable_highlight=False)
         self.output_viewer.pack(fill=tk.BOTH, expand=True, padx=10, pady=(0, 10))
@@ -432,7 +450,7 @@ class CompilerGUI:
         self.paned.add(left_panel, weight=1)
         self.paned.add(right_panel, weight=1)
         
-        self.statusbar = tk.Frame(self.root, bg=COLOR["panel_alt"], height=28)
+        self.statusbar = tk.Frame(self.root, bg=COLOR["panel_alt"], height=42)
         self.statusbar.pack(side=tk.BOTTOM, fill=tk.X)
         self.statusbar.pack_propagate(False)
 
@@ -467,11 +485,83 @@ class CompilerGUI:
             
         content = self.stage_outputs.get(key, "")
         self.output_viewer.set(content)
+        self.apply_output_tags(self.output_viewer, key, content)
+        self.sync_fullscreen_output()
         
-        # 如果是 ERROR，高亮显示
-        if "ERROR" in key or "Exception" in content:
-            self.output_viewer.text.tag_configure("ErrText", foreground=COLOR["syn_error"])
-            self.output_viewer.text.tag_add("ErrText", "1.0", tk.END)
+    def stage_title(self, key=None):
+        key = key or self.current_stage
+        return next((title for stage_key, title in STAGES if stage_key == key), key)
+
+    def apply_output_tags(self, viewer, key, content):
+        if "ERROR" in key or "Exception" in content or "错误" in content:
+            viewer.text.tag_configure("ErrText", foreground=COLOR["syn_error"])
+            viewer.text.tag_add("ErrText", "1.0", tk.END)
+
+    def sync_fullscreen_output(self):
+        if not self.fullscreen_window or not self.fullscreen_window.winfo_exists():
+            return
+        content = self.stage_outputs.get(self.current_stage, "")
+        self.fullscreen_title_var.set(f"{self.stage_title()}  ·  {self.current_file.name}")
+        self.fullscreen_viewer.set(content)
+        self.apply_output_tags(self.fullscreen_viewer, self.current_stage, content)
+
+    def open_output_fullscreen(self):
+        if self.fullscreen_window and self.fullscreen_window.winfo_exists():
+            self.fullscreen_window.lift()
+            self.fullscreen_window.focus_force()
+            return
+
+        window = tk.Toplevel(self.root)
+        self.fullscreen_window = window
+        window.title(f"{self.stage_title()} - Fullscreen")
+        window.configure(bg=COLOR["app_bg"])
+        window.minsize(980, 620)
+
+        header = tk.Frame(window, bg=COLOR["panel_bg"], height=82)
+        header.pack(side=tk.TOP, fill=tk.X)
+        header.pack_propagate(False)
+
+        tk.Label(
+            header,
+            textvariable=self.fullscreen_title_var,
+            bg=COLOR["panel_bg"],
+            fg=COLOR["text"],
+            font=self.fonts.hero,
+        ).pack(side=tk.LEFT, padx=(18, 8))
+
+        controls = tk.Frame(header, bg=COLOR["panel_bg"])
+        controls.pack(side=tk.RIGHT, padx=12)
+        font_size = {"value": self.fonts.code_large[1]}
+
+        def set_output_font(size):
+            font_size["value"] = max(10, min(24, size))
+            self.fullscreen_viewer.text.configure(font=(self.fonts.mono_family, font_size["value"]))
+
+        ModernButton(controls, "关闭", window.destroy, self.fonts).pack(side=tk.RIGHT, padx=(10, 0), pady=8)
+        ModernButton(controls, "A-", lambda: set_output_font(font_size["value"] - 1), self.fonts).pack(side=tk.RIGHT, padx=(10, 0), pady=8)
+        ModernButton(controls, "A+", lambda: set_output_font(font_size["value"] + 1), self.fonts).pack(side=tk.RIGHT, padx=(10, 0), pady=8)
+        ModernButton(controls, "复制", self.copy_current_output, self.fonts).pack(side=tk.RIGHT, padx=(10, 0), pady=8)
+
+        body = tk.Frame(window, bg=COLOR["app_bg"])
+        body.pack(fill=tk.BOTH, expand=True, padx=14, pady=14)
+        self.fullscreen_viewer = ModernCodeBox(body, self.fonts, readonly=True, enable_highlight=False)
+        self.fullscreen_viewer.pack(fill=tk.BOTH, expand=True)
+        set_output_font(font_size["value"])
+        self.sync_fullscreen_output()
+
+        def close_fullscreen(event=None):
+            window.destroy()
+
+        def toggle_fullscreen(event=None):
+            window.attributes("-fullscreen", not bool(window.attributes("-fullscreen")))
+
+        window.bind("<Escape>", close_fullscreen)
+        window.bind("<F11>", toggle_fullscreen)
+        window.protocol("WM_DELETE_WINDOW", close_fullscreen)
+        try:
+            window.state("zoomed")
+        except tk.TclError:
+            window.attributes("-fullscreen", True)
 
     def load_file(self, path):
         path = Path(path)
@@ -551,7 +641,9 @@ class CompilerGUI:
         self.update_status(f"已复制 [{self.current_stage}] 内容到剪贴板")
 
 def main():
+    enable_high_dpi()
     root = tk.Tk()
+    root.tk.call("tk", "scaling", 1.5)
     CompilerGUI(root)
     root.mainloop()
 

@@ -1,17 +1,19 @@
-// 前端交互脚本：负责载入示例、提交源码、切换阶段输出。
 const STAGE_LABELS = {
-  TOKENS: "TOKENS",
-  AST: "AST",
-  SEMANTIC: "SEMANTIC",
-  IR: "IR",
-  ASM: "ASM",
-  ERROR: "ERROR",
+  TOKENS: "词法 Tokens",
+  AST: "语法 AST",
+  SEMANTIC: "语义 Semantic",
+  IR: "中间代码 IR",
+  ASM: "汇编 ASM",
+  ERROR: "错误",
 };
 
 const sourceEditor = document.getElementById("source-editor");
 const filenameInput = document.getElementById("filename-input");
 const compileBtn = document.getElementById("compile-btn");
 const loadExampleBtn = document.getElementById("load-example-btn");
+const copyOutputBtn = document.getElementById("copy-output-btn");
+const fullscreenBtn = document.getElementById("fullscreen-btn");
+const outputPanel = document.getElementById("output-panel");
 const outputViewer = document.getElementById("output-viewer");
 const lineNumbers = document.getElementById("line-numbers");
 const stageTabs = document.getElementById("stage-tabs");
@@ -23,7 +25,6 @@ let currentSections = {};
 let currentStage = "TOKENS";
 
 function setStatus(kind, text) {
-  // kind 对应 CSS 中的 idle/running/success/error 状态。
   statusBadge.className = `status-badge ${kind}`;
   statusBadge.textContent = text;
 }
@@ -39,7 +40,6 @@ function updateLineNumbers() {
 }
 
 function renderTabs() {
-  // 根据后端返回的阶段列表动态生成标签页。
   stageTabs.innerHTML = "";
   Object.keys(currentSections).forEach((key) => {
     const node = stageTabTemplate.content.firstElementChild.cloneNode(true);
@@ -74,7 +74,6 @@ async function loadExample() {
 }
 
 async function compileSource() {
-  // 将当前编辑器内容提交给本地后端，由 Python 编译器完成分析。
   const source = sourceEditor.value;
   const filename = filenameInput.value.trim() || "playground.c";
 
@@ -114,6 +113,23 @@ async function compileSource() {
   }
 }
 
+async function copyCurrentOutput() {
+  const text = currentSections[currentStage] || "";
+  if (!text.trim()) {
+    return;
+  }
+  await navigator.clipboard.writeText(text);
+  setStatus("success", "已复制");
+}
+
+function toggleOutputFullscreen() {
+  const enabled = !outputPanel.classList.contains("fullscreen");
+  outputPanel.classList.toggle("fullscreen", enabled);
+  document.body.classList.toggle("output-fullscreen", enabled);
+  fullscreenBtn.textContent = enabled ? "退出" : "⛶";
+  fullscreenBtn.title = enabled ? "退出全屏" : "全屏查看";
+}
+
 compileBtn.addEventListener("click", () => {
   compileSource().catch((error) => {
     currentSections = { ERROR: String(error) };
@@ -130,6 +146,21 @@ loadExampleBtn.addEventListener("click", () => {
     setStatus("error", "失败");
     artifactHint.textContent = String(error);
   });
+});
+
+copyOutputBtn.addEventListener("click", () => {
+  copyCurrentOutput().catch((error) => {
+    setStatus("error", "复制失败");
+    artifactHint.textContent = String(error);
+  });
+});
+
+fullscreenBtn.addEventListener("click", toggleOutputFullscreen);
+
+document.addEventListener("keydown", (event) => {
+  if (event.key === "Escape" && outputPanel.classList.contains("fullscreen")) {
+    toggleOutputFullscreen();
+  }
 });
 
 sourceEditor.addEventListener("input", updateLineNumbers);

@@ -3,27 +3,27 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Compiler Studio Web</title>
+  <title>C Compiler Studio Web</title>
   <link rel="stylesheet" href="/assets/styles.css">
 </head>
 <body>
-  <!-- 页面只负责展示和输入，真正的编译流程由 src/webapp.py 调用 main.py 完成。 -->
   <div class="app-shell">
     <header class="topbar">
       <div class="brand">
         <span class="brand-mark">C</span>
-        <div>
+        <div class="brand-copy">
           <h1>C Compiler Studio</h1>
           <p>Tokens · AST · Semantic · IR · ASM</p>
         </div>
       </div>
+
       <div class="topbar-tools">
         <label class="filename-input">
           <span>文件名</span>
-          <input id="filename-input" type="text" value="playground.c" />
+          <input id="filename-input" type="text" value="playground.c" autocomplete="off">
         </label>
-        <button id="load-example-btn" class="btn btn-secondary">载入示例</button>
-        <button id="compile-btn" class="btn btn-primary">开始编译</button>
+        <button id="load-example-btn" class="btn btn-secondary" type="button">载入示例</button>
+        <button id="compile-btn" class="btn btn-primary" type="button">开始编译</button>
       </div>
     </header>
 
@@ -32,33 +32,42 @@
         <div class="panel-header">
           <div>
             <p class="panel-label">Source Editor</p>
-            <h2>源码输入</h2>
+            <h2>源代码</h2>
           </div>
+          <span class="panel-meta">UTF-8 · C subset</span>
         </div>
+
         <div class="editor-frame">
           <pre id="line-numbers" aria-hidden="true"></pre>
           <textarea id="source-editor" spellcheck="false"></textarea>
         </div>
       </section>
 
-      <section class="panel output-panel">
+      <section id="output-panel" class="panel output-panel">
         <div class="panel-header output-header">
           <div>
             <p class="panel-label">Pipeline Output</p>
             <h2>阶段结果</h2>
           </div>
-          <div class="status-block">
+
+          <div class="output-actions">
             <span id="status-badge" class="status-badge idle">就绪</span>
-            <span id="artifact-hint" class="artifact-hint">output/</span>
+            <button id="fullscreen-btn" class="icon-btn" type="button" title="全屏查看">⛶</button>
+            <button id="copy-output-btn" class="icon-btn" type="button" title="复制当前结果">复制</button>
           </div>
         </div>
 
         <div class="stage-row">
           <div id="stage-tabs" class="stage-tabs"></div>
         </div>
+
         <div class="output-frame">
           <pre id="output-viewer"></pre>
         </div>
+
+        <footer class="output-footer">
+          <span id="artifact-hint">output/</span>
+        </footer>
       </section>
     </main>
   </div>

@@ -5,9 +5,8 @@
 """
 
 import sys
-from dataclasses import dataclass
+from dataclasses import dataclass, fields, is_dataclass
 from pathlib import Path
-from pprint import pformat
 
 CURRENT_DIR = Path(__file__).resolve().parent
 if str(CURRENT_DIR) not in sys.path:
@@ -80,6 +79,72 @@ def _fail_result(source_path: Path, stage_outputs, sections, title: str, message
     return CompileResult(False, source_path, sections, stage_outputs, log_text, OUTPUT_DIR)
 
 
+def format_ast(ast) -> str:
+    """Render dataclass AST like pformat, but hide empty noise fields."""
+
+    def visible_items(node):
+        items = []
+        for field_info in fields(node):
+            value = getattr(node, field_info.name)
+            if value is None or value is False:
+                continue
+            items.append((field_info.name, value))
+        return items
+
+    def inline_value(value, depth=0):
+        if isinstance(value, str):
+            return repr(value)
+        if isinstance(value, (int, float, bool)) or value is None:
+            return repr(value)
+        if isinstance(value, list):
+            if not value:
+                return "[]"
+            if len(value) <= 6:
+                parts = []
+                for item in value:
+                    item_text = inline_value(item, depth + 1)
+                    if item_text is None:
+                        return None
+                    parts.append(item_text)
+                text = "[" + ", ".join(parts) + "]"
+                if "\n" not in text and len(text) <= 96:
+                    return text
+            return None
+        if is_dataclass(value):
+            items = visible_items(value)
+            parts = []
+            for name, child in items:
+                child_text = inline_value(child, depth + 1)
+                if child_text is None or "\n" in child_text:
+                    return None
+                parts.append(f"{name}={child_text}")
+            text = f"{type(value).__name__}(" + ", ".join(parts) + ")"
+            return text if len(text) <= 96 or depth > 0 else None
+        return repr(value)
+
+    def render(value, level=0, name=None):
+        indent = "    " * level
+        prefix = f"{name}=" if name else ""
+        inline = inline_value(value)
+        if inline is not None:
+            return f"{indent}{prefix}{inline}"
+        if isinstance(value, list):
+            lines = [f"{indent}{prefix}["]
+            for item in value:
+                lines.append(render(item, level + 1) + ",")
+            lines.append(f"{indent}]")
+            return "\n".join(lines)
+        if is_dataclass(value):
+            lines = [f"{indent}{prefix}{type(value).__name__}("]
+            for field_name, child in visible_items(value):
+                lines.append(render(child, level + 1, field_name) + ",")
+            lines.append(f"{indent})")
+            return "\n".join(lines)
+        return f"{indent}{prefix}{repr(value)}"
+
+    return render(ast)
+
+
 def run_pipeline_from_text(source: str, source_path: Path) -> CompileResult:
     """对一段源码文本执行完整编译流程。"""
 
@@ -105,7 +170,7 @@ def run_pipeline_from_text(source: str, source_path: Path) -> CompileResult:
     except SyntaxError as exc:
         return _fail_result(source_path, stage_outputs, sections, "ERROR", f"语法错误：{exc}")
 
-    ast_text = pformat(ast)
+    ast_text = format_ast(ast)
     sections.append(("AST", ast_text))
     stage_outputs["ast.txt"] = ast_text
 
