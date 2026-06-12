@@ -14,8 +14,11 @@ from .ast_nodes import (
 )
 
 
+# 基础类型关键字集合
 TYPE_KEYWORDS = {"int", "char", "float", "void"}
+# 词法阶段把 printf/scanf 视作 RW，这里也要能识别为函数名
 BUILTIN_CALLS = {"printf", "scanf"}
+# 赋值运算符集合（含复合赋值）
 ASSIGN_OPS = {"=", "+=", "-=", "*=", "/=", "%="}
 
 
@@ -24,7 +27,7 @@ class Parser:
 
     def __init__(self, tokens):
         self.ts = TokenStream(tokens)
-        # 记录已经出现过的结构体名，兼容 student a; 这种课程题目写法。
+        # 记录已经出现过的结构体名，兼容 student a; 这种课程题目写法
         self.struct_names = set()
 
     def parse(self):
@@ -32,6 +35,7 @@ class Parser:
 
         includes = []
         declarations = []
+        # 顶层循环：依次吃掉 #include / struct 定义 / 其他外部声明
         while not self.ts.is_eof():
             if self.is_preprocessor_line():
                 includes.append(self.parse_preprocessor_line())
@@ -43,21 +47,29 @@ class Parser:
         return Program(includes, declarations)
 
     def is_preprocessor_line(self):
+        """当前位置是否是 # 开头的预处理行。"""
+
         tok = self.ts.current()
         return tok.type == TokenType.DL and tok.lexeme == "#"
 
     def parse_preprocessor_line(self):
+        """吃掉一整行 # 开头的 Token，包成 Include 节点。"""
+
         line = self.ts.current().line
         parts = []
+        # 同一行的所有 lexeme 拼起来就是原文
         while not self.ts.is_eof() and self.ts.current().line == line:
             parts.append(self.ts.advance().lexeme)
         text = "".join(parts)
         header = ""
+        # 形如 #include <stdio.h> → header 收 "<stdio.h>"
         if len(parts) >= 5 and parts[0] == "#" and parts[1] == "include":
             header = "".join(parts[2:])
         return Include(text, header)
 
     def is_struct_definition_start(self):
+        """当前位置是否是 `struct NAME {` 的结构体定义。"""
+
         return (
             self.ts.current().type == TokenType.RW
             and self.ts.current().lexeme == "struct"
@@ -74,6 +86,7 @@ class Parser:
         self.struct_names.add(name)
         self.ts.expect(TokenType.DL, "{", "结构体定义缺少 {")
         fields = []
+        # 大括号内可以有多行声明，每行以 ; 结束
         while not (self.ts.current().type == TokenType.DL and self.ts.current().lexeme == "}"):
             field_decls = self.parse_var_decl_list()
             self.ts.expect(TokenType.DL, ";", "结构体字段后缺少 ;")
@@ -83,12 +96,16 @@ class Parser:
         return StructDef(name, fields)
 
     def parse_external_declaration(self):
+        """解析顶层声明：函数定义 或 全局变量定义。"""
+
         base_type = self.parse_type_name()
         var_type, name, array_size, is_array = self.parse_named_declarator(base_type)
+        # 看到 ( 判定为函数定义
         if self.ts.current().type == TokenType.DL and self.ts.current().lexeme == "(":
             params = self.parse_parameter_list()
             body = self.parse_block()
             return FunctionDef(var_type, name, params, body)
+        # 否则是变量定义，可能有 = init 和 , 多变量
         init = None
         if self.ts.match(TokenType.OP, "="):
             init = self.parse_initializer()
@@ -101,6 +118,7 @@ class Parser:
                 init = self.parse_initializer()
             decls.append(VarDecl(var_type, name, init, array_size, is_array))
         self.ts.expect(TokenType.DL, ";", "全局变量定义后缺少 ;")
+        # 单个直接返回，多个用 DeclStmt 包起来
         return decls[0] if len(decls) == 1 else DeclStmt(decls)
 
     def parse_type_name(self):
@@ -115,12 +133,15 @@ class Parser:
             name = self.ts.expect(TokenType.ID, message="结构体类型名错误").lexeme
             self.struct_names.add(name)
             return f"struct {name}"
+        # 单独的结构体名（如 `student a;`）也认作 struct 类型
         if tok.type == TokenType.ID and tok.lexeme in self.struct_names:
             self.ts.advance()
             return f"struct {tok.lexeme}"
         raise SyntaxError(f"类型说明符错误：第 {tok.line} 行第 {tok.col} 列，得到 {tok}")
 
     def parse_pointer_depth(self):
+        """吃掉连续 * 算指针层数，如 `int **p` 返回 2。"""
+
         depth = 0
         while self.ts.current().type == TokenType.OP and self.ts.current().lexeme == "*":
             self.ts.advance()
@@ -128,9 +149,13 @@ class Parser:
         return depth
 
     def make_type(self, base_type, pointer_depth):
+        """把基础类型和指针层数拼成 "int**" 这种字符串。"""
+
         return base_type + ("*" * pointer_depth)
 
     def parse_named_declarator(self, base_type):
+        """解析 `*name`、`name`、`name[expr]` 三种声明符。"""
+
         pointer_depth = self.parse_pointer_depth()
         name = self.ts.expect(TokenType.ID, message="变量名错误").lexeme
         array_size = None
@@ -138,17 +163,21 @@ class Parser:
         if self.ts.current().type == TokenType.DL and self.ts.current().lexeme == "[":
             self.ts.advance()
             is_array = True
+            # 允许 int a[] 这种未指定大小
             if not (self.ts.current().type == TokenType.DL and self.ts.current().lexeme == "]"):
                 array_size = self.parse_expression()
             self.ts.expect(TokenType.DL, "]", "数组声明缺少 ]")
         return self.make_type(base_type, pointer_depth), name, array_size, is_array
 
     def parse_parameter_list(self):
+        """解析函数形参列表，吞掉 ( 和 )。"""
+
         self.ts.expect(TokenType.DL, "(", "缺少 (")
         params = []
         if self.ts.current().type == TokenType.DL and self.ts.current().lexeme == ")":
             self.ts.advance()
             return params
+        # `void` 当唯一参数等价于空参
         if (
             self.ts.current().type == TokenType.RW
             and self.ts.current().lexeme == "void"
@@ -169,6 +198,8 @@ class Parser:
         return params
 
     def parse_block(self):
+        """解析 { statements } 复合语句。"""
+
         self.ts.expect(TokenType.DL, "{", "缺少 {")
         statements = []
         while not (self.ts.current().type == TokenType.DL and self.ts.current().lexeme == "}"):
@@ -177,6 +208,8 @@ class Parser:
         return Block(statements)
 
     def is_type_start(self):
+        """当前 Token 是否能作为类型说明符的开头。"""
+
         tok = self.ts.current()
         return (
             (tok.type == TokenType.RW and tok.lexeme in TYPE_KEYWORDS)
@@ -185,6 +218,8 @@ class Parser:
         )
 
     def parse_statement(self):
+        """根据首 Token 分派到不同的语句解析。"""
+
         tok = self.ts.current()
         if tok.type == TokenType.DL and tok.lexeme == ";":
             self.ts.advance()
@@ -213,11 +248,14 @@ class Parser:
             return ContinueStmt()
         if tok.type == TokenType.RW and tok.lexeme == "return":
             return self.parse_return()
+        # 兜底：按表达式语句处理
         expr = self.parse_expression()
         self.ts.expect(TokenType.DL, ";", "语句后缺少 ;")
         return expr if isinstance(expr, Assign) else ExprStmt(expr)
 
     def parse_var_decl_list(self):
+        """解析 `int a, b = 1, c[3];` 这种多变量声明（不吞尾部 ;）。"""
+
         base_type = self.parse_type_name()
         decls = []
         while True:
@@ -238,6 +276,7 @@ class Parser:
             return self.parse_expression()
         self.ts.advance()
         values = []
+        # 允许空 { } 和尾部多余的逗号
         if not (self.ts.current().type == TokenType.DL and self.ts.current().lexeme == "}"):
             values.append(self.parse_initializer())
             while self.ts.current().type == TokenType.DL and self.ts.current().lexeme == ",":
@@ -249,6 +288,8 @@ class Parser:
         return InitializerList(values)
 
     def parse_if(self):
+        """解析 if (cond) then [else other]。"""
+
         self.ts.expect(TokenType.RW, "if", "缺少 if")
         self.ts.expect(TokenType.DL, "(", "缺少 (")
         condition = self.parse_expression()
@@ -261,6 +302,8 @@ class Parser:
         return IfStmt(condition, then_branch, else_branch)
 
     def parse_while(self):
+        """解析 while (cond) body。"""
+
         self.ts.expect(TokenType.RW, "while", "缺少 while")
         self.ts.expect(TokenType.DL, "(", "缺少 (")
         condition = self.parse_expression()
@@ -269,6 +312,8 @@ class Parser:
         return WhileStmt(condition, body)
 
     def parse_do_while(self):
+        """解析 do body while (cond);。"""
+
         self.ts.expect(TokenType.RW, "do", "缺少 do")
         body = self.parse_statement()
         self.ts.expect(TokenType.RW, "while", "do-while 缺少 while")
@@ -285,6 +330,7 @@ class Parser:
         self.ts.expect(TokenType.DL, "(", "缺少 (")
         init = None
         if not (self.ts.current().type == TokenType.DL and self.ts.current().lexeme == ";"):
+            # init 部分既可以是表达式，也可以是变量声明
             if self.is_type_start():
                 decls = self.parse_var_decl_list()
                 init = decls[0] if len(decls) == 1 else DeclStmt(decls)
@@ -303,6 +349,8 @@ class Parser:
         return ForStmt(init, condition, update, body)
 
     def parse_return(self):
+        """解析 return [expr];。"""
+
         self.ts.expect(TokenType.RW, "return", "缺少 return")
         if self.ts.current().type == TokenType.DL and self.ts.current().lexeme == ";":
             self.ts.advance()
@@ -311,6 +359,10 @@ class Parser:
         self.ts.expect(TokenType.DL, ";", "return 后缺少 ;")
         return ReturnStmt(value)
 
+    # -------------------------------------------------------------------------
+    # 表达式解析：按 C 优先级从低到高层层下推
+    # assignment → or → and → equality → relational → add → term → unary → postfix
+    # -------------------------------------------------------------------------
     def parse_expression(self):
         return self.parse_assignment()
 
@@ -320,13 +372,16 @@ class Parser:
         expr = self.parse_logical_or()
         if self.ts.current().type == TokenType.OP and self.ts.current().lexeme in ASSIGN_OPS:
             op = self.ts.advance().lexeme
-            value = self.parse_assignment()
+            value = self.parse_assignment()  # 右结合
+            # += -= 等复合赋值拆成 a = a + b 形式交给后续阶段
             if op != "=":
                 value = BinaryExpr(op[0], expr, value)
             return Assign(expr, value)
         return expr
 
     def parse_logical_or(self):
+        """|| 运算，左结合。"""
+
         expr = self.parse_logical_and()
         while self.ts.current().type == TokenType.OP and self.ts.current().lexeme == "||":
             op = self.ts.advance().lexeme
@@ -335,6 +390,8 @@ class Parser:
         return expr
 
     def parse_logical_and(self):
+        """&& 运算，左结合。"""
+
         expr = self.parse_equality()
         while self.ts.current().type == TokenType.OP and self.ts.current().lexeme == "&&":
             op = self.ts.advance().lexeme
@@ -343,6 +400,8 @@ class Parser:
         return expr
 
     def parse_equality(self):
+        """== / != 运算，左结合。"""
+
         expr = self.parse_relational()
         while self.ts.current().type == TokenType.OP and self.ts.current().lexeme in ("==", "!="):
             op = self.ts.advance().lexeme
@@ -351,6 +410,8 @@ class Parser:
         return expr
 
     def parse_relational(self):
+        """< <= > >= 运算，左结合。"""
+
         expr = self.parse_additive()
         while self.ts.current().type == TokenType.OP and self.ts.current().lexeme in ("<", "<=", ">", ">="):
             op = self.ts.advance().lexeme
@@ -359,6 +420,8 @@ class Parser:
         return expr
 
     def parse_additive(self):
+        """+ - 运算，左结合。"""
+
         expr = self.parse_term()
         while self.ts.current().type == TokenType.OP and self.ts.current().lexeme in ("+", "-"):
             op = self.ts.advance().lexeme
@@ -367,6 +430,8 @@ class Parser:
         return expr
 
     def parse_term(self):
+        """* / % 运算，左结合。"""
+
         expr = self.parse_unary()
         while self.ts.current().type == TokenType.OP and self.ts.current().lexeme in ("*", "/", "%"):
             op = self.ts.advance().lexeme
@@ -375,6 +440,8 @@ class Parser:
         return expr
 
     def parse_unary(self):
+        """前缀一元运算 + - ! & *，右递归。"""
+
         tok = self.ts.current()
         if tok.type == TokenType.OP and tok.lexeme in ("+", "-", "!", "&", "*"):
             op = self.ts.advance().lexeme
@@ -386,6 +453,7 @@ class Parser:
         """解析函数调用、数组下标和结构体成员访问。"""
 
         expr = self.parse_primary()
+        # 循环叠加后缀，直到不再是后缀运算符
         while True:
             tok = self.ts.current()
             if tok.type == TokenType.DL and tok.lexeme == "(":
@@ -417,6 +485,8 @@ class Parser:
         return expr
 
     def parse_arguments(self):
+        """解析函数实参列表，吞掉 ( 和 )。"""
+
         self.ts.expect(TokenType.DL, "(", "缺少 (")
         args = []
         if not (self.ts.current().type == TokenType.DL and self.ts.current().lexeme == ")"):
@@ -428,12 +498,15 @@ class Parser:
         return args
 
     def parse_primary(self):
+        """最基本的字面量、标识符和带括号子表达式。"""
+
         tok = self.ts.current()
         if tok.type == TokenType.DL and tok.lexeme == "(":
             self.ts.advance()
             expr = self.parse_expression()
             self.ts.expect(TokenType.DL, ")", "缺少 )")
             return expr
+        # printf / scanf 这种 RW 视作普通标识符，方便后续阶段识别为内置函数
         if tok.type == TokenType.ID or (tok.type == TokenType.RW and tok.lexeme in BUILTIN_CALLS):
             self.ts.advance()
             return Identifier(tok.lexeme)
