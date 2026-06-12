@@ -21,11 +21,11 @@ class SemanticAnalyzer:
     """遍历 AST 并完成语义检查。"""
 
     def __init__(self):
-        self.symbols = SymbolTable()
-        self.structs = {}
-        self.functions = {}
+        self.symbols = SymbolTable()   # 作用域符号表
+        self.structs = {}              # name -> {kind, fields}
+        self.functions = {}             # name -> {kind, return_type, params}
         self.current_return_type = None
-        self.loop_depth = 0
+        self.loop_depth = 0            # 嵌套循环深度，用于 break/continue 检查
 
     def analyze(self, node):
         """语义分析入口，返回最终符号表。"""
@@ -34,23 +34,31 @@ class SemanticAnalyzer:
         return self.symbols
 
     def visit(self, node):
+        """按节点类型分派到对应的 visit_xxx 方法。"""
+
         method = getattr(self, f"visit_{type(node).__name__}", None)
         if method is None:
             raise SemanticError(f"未实现的语义分析节点：{type(node).__name__}")
         return method(node)
 
-    def visit_Program(self, node: Program):
-        """先登记结构体和函数，再分析变量和函数体。"""
+    # -------------------------------------------------------------------------
+    # 程序级遍历：先登记结构体/函数，再检查具体内容
+    # -------------------------------------------------------------------------
 
+    def visit_Program(self, node: Program):
+        # 第一遍：登记所有结构体（其他声明可能引用尚未见到的 struct）
         for item in node.declarations:
             if isinstance(item, StructDef):
                 self.register_struct(item)
+        # 第二遍：登记所有函数签名
         for item in node.declarations:
             if isinstance(item, FunctionDef):
                 self.register_function(item)
+        # 第三遍：检查全局变量声明
         for item in node.declarations:
             if not isinstance(item, (StructDef, FunctionDef)):
                 self.visit(item)
+        # 第四遍：检查所有函数体（此时所有符号都已登记）
         for item in node.declarations:
             if isinstance(item, FunctionDef):
                 self.visit(item)
@@ -95,7 +103,11 @@ class SemanticAnalyzer:
         self.symbols.define_global(node.name, info)
 
     def visit_StructDef(self, node: StructDef):
-        return None
+        return None  # 结构体已在 register_struct 中处理
+
+    # -------------------------------------------------------------------------
+    # 语句检查
+    # -------------------------------------------------------------------------
 
     def visit_FunctionDef(self, node: FunctionDef):
         """进入函数作用域，登记参数并检查函数体。"""
@@ -206,6 +218,10 @@ class SemanticAnalyzer:
     def visit_EmptyStmt(self, node: EmptyStmt):
         return "void"
 
+    # -------------------------------------------------------------------------
+    # 表达式求值：返回 C 类型字符串
+    # -------------------------------------------------------------------------
+
     def visit_CallExpr(self, node: CallExpr):
         """检查内置输入输出函数和普通函数调用。"""
 
@@ -235,6 +251,7 @@ class SemanticAnalyzer:
     def visit_BinaryExpr(self, node: BinaryExpr):
         left_type = self.visit(node.left)
         right_type = self.visit(node.right)
+        # 比较 / 逻辑运算：两边须是标量或同类型指针，结果是 int
         if node.operator in ("<", "<=", ">", ">=", "==", "!="):
             if self.compatible_for_compare(left_type, right_type):
                 return "int"
@@ -243,13 +260,16 @@ class SemanticAnalyzer:
             self.ensure_scalar(left_type, "逻辑表达式左操作数")
             self.ensure_scalar(right_type, "逻辑表达式右操作数")
             return "int"
+        # 指针算术：ptr + n 或 ptr - n
         if node.operator in ("+", "-") and self.is_pointer(left_type) and right_type in NUMERIC_TYPES:
             return left_type
         if node.operator == "+" and self.is_pointer(right_type) and left_type in NUMERIC_TYPES:
             return right_type
+        # 算术混合 float / int：任一操作数是 float 结果就是 float
         if left_type == "float" or right_type == "float":
             if left_type in NUMERIC_TYPES and right_type in NUMERIC_TYPES:
                 return "float"
+        # 两边都是数值类型 → int
         if left_type in NUMERIC_TYPES and right_type in NUMERIC_TYPES:
             return "int"
         raise SemanticError(f"不支持的二元表达式类型：{left_type} {node.operator} {right_type}")
@@ -306,6 +326,10 @@ class SemanticAnalyzer:
             return self.decay_array_type(field["type"], True)
         return field["type"]
 
+    # -------------------------------------------------------------------------
+    # 辅助方法
+    # -------------------------------------------------------------------------
+
     def lvalue_type(self, node, allow_array_name=False):
         """判断一个节点能否作为赋值目标，并返回其类型。"""
 
@@ -336,6 +360,8 @@ class SemanticAnalyzer:
         return field["type"]
 
     def member_struct_name(self, node):
+        """从 MemberAccess 节点推断结构体名字（处理 -> 和 . 两种情况）。"""
+
         obj_type = self.visit(node.obj)
         if node.through_pointer:
             if not self.is_pointer(obj_type):
@@ -483,6 +509,7 @@ class SemanticAnalyzer:
         return typ
 
     def decay_array_type(self, typ, is_array):
+        # C 里数组传参 decay 成指针
         return f"{typ}*" if is_array else typ
 
     def describe_lvalue(self, node):
