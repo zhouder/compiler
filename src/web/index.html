@@ -18,12 +18,13 @@
       </div>
 
       <div class="topbar-tools">
+        <button id="lang-toggle" class="btn btn-secondary" type="button">中文</button>
         <label class="filename-input">
-          <span>文件名</span>
+          <span>Filename</span>
           <input id="filename-input" type="text" value="playground.c" autocomplete="off">
         </label>
-        <button id="load-example-btn" class="btn btn-secondary" type="button">载入示例</button>
-        <button id="compile-btn" class="btn btn-primary" type="button">开始编译</button>
+        <button id="load-example-btn" class="btn btn-secondary" type="button">Load Example</button>
+        <button id="compile-btn" class="btn btn-primary" type="button">Compile</button>
       </div>
     </header>
 
@@ -32,7 +33,7 @@
         <div class="panel-header">
           <div>
             <p class="panel-label">Source Editor</p>
-            <h2>源代码</h2>
+            <h2>Source Code</h2>
           </div>
           <span class="panel-meta">UTF-8 · C subset</span>
         </div>
@@ -47,13 +48,13 @@
         <div class="panel-header output-header">
           <div>
             <p class="panel-label">Pipeline Output</p>
-            <h2>阶段结果</h2>
+            <h2>Stage Results</h2>
           </div>
 
           <div class="output-actions">
-            <span id="status-badge" class="status-badge idle">就绪</span>
-            <button id="fullscreen-btn" class="icon-btn" type="button" title="全屏查看">⛶</button>
-            <button id="copy-output-btn" class="icon-btn" type="button" title="复制当前结果">复制</button>
+            <span id="status-badge" class="status-badge idle">Ready</span>
+            <button id="fullscreen-btn" class="icon-btn" type="button" title="Fullscreen">⛶</button>
+            <button id="copy-output-btn" class="icon-btn" type="button" title="Copy">Copy</button>
           </div>
         </div>
 
