@@ -2,12 +2,12 @@
 
 > A compiler for C-subset language implemented in Python
 
+<a href="./README.md">English</a> | <a href="./README.zh-CN.md">中文</a>
+
 [![Python](https://img.shields.io/badge/Python-3.8+-blue.svg)](https://python.org)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
-<p align="center">
-  <a href="./README.md">English</a> | <a href="./README.zh-CN.md">中文</a>
-</p>
+![Preview](docs/preview-en.png)
 
 ## Pipeline
 
@@ -25,29 +25,24 @@ Features:
 
 ## Quick Start
 
-```powershell
-# Install dependencies
-pip install -r requirements.txt 2>/dev/null || echo "No requirements.txt"
-
-# Run
+```bash
 python src/main.py examples/test.c
-
-# Output files
-# output/test.tokens.txt  - Tokens
-# output/test.ast.txt     - AST
-# output/test.ir.txt      - IR (Quadruples)
-# output/test.asm         - ASM (x86)
 ```
+
+Output files:
+- `output/test.tokens.txt` — Tokens
+- `output/test.ast.txt` — AST
+- `output/test.ir.txt` — IR (Quadruples)
+- `output/test.asm` — ASM (x86)
 
 ## Visual Interface
 
-```powershell
+```bash
 # GUI
 python src/gui.py
 
-# Web
+# Web (visit http://127.0.0.1:8000)
 python -B src/webapp.py
-# Visit http://127.0.0.1:8000
 ```
 
 ## Project Structure
@@ -86,7 +81,6 @@ compiler/
 Requires DOSBox for 16-bit execution:
 
 ```bat
-# In DOSBox
 mount c D:\compiler\output
 c:
 masm test.asm;
@@ -96,4 +90,4 @@ test
 
 ## License
 
-MIT License - see [LICENSE](LICENSE)
+MIT License — see [LICENSE](LICENSE)
