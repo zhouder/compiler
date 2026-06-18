@@ -1,1 +1,4 @@
-tkinter ; usually built-in
+# No external dependencies required
+# This project uses only Python standard library modules:
+# - tkinter (usually built-in with Python)
+# - http.server, json, pathlib, etc.
