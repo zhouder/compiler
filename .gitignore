@@ -1,8 +1,13 @@
 __pycache__/
 *.pyc
+*.pyo
 output/
+.env
+.venv/
+venv/
+env/
 .vscode/
 .idea/
 .claude/
-语法树.drawio
-语法树.draw.io
+*.drawio
+*.draw.io
