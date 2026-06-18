@@ -2,8 +2,12 @@
 
 > 面向 C 子集的编译器课程设计 | Python 实现
 
+<a href="./README.md">English</a> | <a href="./README.zh-CN.md">中文</a>
+
 [![Python](https://img.shields.io/badge/Python-3.8+-blue.svg)](https://python.org)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+
+![预览](docs/preview-zh.png)
 
 ## 编译流程
 
@@ -21,29 +25,24 @@
 
 ## 快速开始
 
-```powershell
-# 安装依赖
-pip install -r requirements.txt 2>/dev/null || echo "No requirements.txt"
-
-# 运行
+```bash
 python src/main.py examples/test.c
-
-# 输出文件
-# output/test.tokens.txt  - 词法分析结果
-# output/test.ast.txt     - 抽象语法树
-# output/test.ir.txt      - 中间代码四元式
-# output/test.asm         - 汇编代码
 ```
+
+输出文件：
+- `output/test.tokens.txt` — 词法分析结果
+- `output/test.ast.txt` — 抽象语法树
+- `output/test.ir.txt` — 中间代码四元式
+- `output/test.asm` — 汇编代码
 
 ## 可视化界面
 
-```powershell
+```bash
 # 桌面 GUI
 python src/gui.py
 
-# 网页版
+# 网页版（访问 http://127.0.0.1:8000）
 python -B src/webapp.py
-# 访问 http://127.0.0.1:8000
 ```
 
 ## 项目结构
@@ -82,7 +81,6 @@ compiler/
 需要使用 DOSBox 运行 16 位程序：
 
 ```bat
-# 在 DOSBox 中
 mount c D:\compiler\output
 c:
 masm test.asm;
@@ -92,4 +90,4 @@ test
 
 ## 许可证
 
-MIT License - 见 [LICENSE](LICENSE)
+MIT License — 见 [LICENSE](LICENSE)
