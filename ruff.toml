@@ -1,0 +1,8 @@
+[lint]
+# Copied from pyproject.toml so CI can run ruff without parsing pyproject
+line-length = 120
+target-version = "py39"
+
+[lint.lint]
+select = ["E", "F", "W", "I", "N", "UP", "SIM", "C", "B"]
+ignore = ["E501", "C901"]

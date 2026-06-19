@@ -296,9 +296,6 @@ class SemanticAnalyzer:
     def visit_Literal(self, node: Literal):
         return node.literal_type
 
-    def visit_InitializerList(self, node: InitializerList):
-        return "initializer_list"
-
     def visit_Identifier(self, node: Identifier):
         symbol = self.require_value_symbol(node.name)
         if symbol.get("is_array"):

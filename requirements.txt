@@ -1,4 +1,5 @@
-# No external dependencies required
-# This project uses only Python standard library modules:
-# - tkinter (usually built-in with Python)
-# - http.server, json, pathlib, etc.
+# This project uses only the Python standard library.
+# No third-party packages are required.
+#
+# Dev tools (optional):
+#   pip install ruff pytest

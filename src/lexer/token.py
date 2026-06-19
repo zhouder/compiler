@@ -21,7 +21,6 @@ class TokenType(Enum):
     CS_CHAR = auto()
     OP = auto()
     DL = auto()
-    CM = auto()
     ERROR = auto()
     EOF = auto()
 
@@ -37,7 +36,6 @@ TYPE_CN = {
     TokenType.CS_CHAR: "字符常量",
     TokenType.OP: "运算符",
     TokenType.DL: "界符",
-    TokenType.CM: "注释",
     TokenType.ERROR: "错误",
     TokenType.EOF: "EOF",
 }

@@ -1,13 +1,13 @@
 # 编译器
 
-> 面向 C 子集的编译器课程设计 | Python 实现
+> 用 Python 实现的 C 子集编译器
 
 <a href="./README.md">English</a> | <a href="./README.zh-CN.md">中文</a>
 
 [![Python](https://img.shields.io/badge/Python-3.8+-blue.svg)](https://python.org)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
-![预览](docs/preview-zh.png)
+![编译器预览截图 — Web 界面深色模式下的 ASM 输出](docs/preview-zh.png)
 
 ## 编译流程
 
@@ -27,8 +27,12 @@
 ## 快速开始
 
 ```bash
+git clone https://github.com/zhouder/compiler.git
+cd compiler
 python src/main.py examples/test.c
 ```
+
+> **注意：** `output/` 目录在首次 clone 时为空，运行上述命令后会由编译器自动生成所有输出文件。
 
 输出文件：
 - `output/test.tokens.txt` — 词法分析结果
@@ -79,7 +83,7 @@ compiler/
 
 ## 汇编验证
 
-需要使用 DOSBox 运行 16 位程序：
+需要使用 DOSBox 运行 16 位程序（请将下方命令中的 `D:\compiler\output` 替换为你本地的 `output/` 绝对路径）：
 
 ```bat
 mount c D:\compiler\output

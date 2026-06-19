@@ -22,9 +22,6 @@ class SymbolTable:
     def pop(self):
         self.scopes.pop()
 
-    def current_scope(self):
-        return self.scopes[-1]
-
     def define(self, name, info):
         """在当前作用域定义符号，并检查重复定义。"""
 
@@ -46,6 +43,3 @@ class SymbolTable:
             if name in scope:
                 return scope[name]
         return None
-
-    def lookup_current(self, name):
-        return self.scopes[-1].get(name)

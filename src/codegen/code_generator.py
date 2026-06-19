@@ -8,8 +8,6 @@
 class CodeGenerator:
     """四元式到汇编文本的转换器。"""
 
-    WORD_SIZE = 2  # 16 位环境：1 word = 2 字节，数组下标寻址要 *2
-
     def __init__(self):
         self.reset()
 

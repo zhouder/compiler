@@ -1,7 +1,6 @@
 /* =========================================================
-   C Compiler Studio · Apple 风格自适应主题
-   浅色 (apple.com) + 深色 (macOS Sonoma) 双模式
-   跟随系统 prefers-color-scheme 自动切换
+   C Compiler Studio · Adaptive Light / Dark Theme
+   Follows system prefers-color-scheme
    ========================================================= */
 
 :root {
@@ -38,7 +37,6 @@
   --accent-hover: #0077ed;
   --accent-press: #006edb;
   --accent-soft: rgba(0, 113, 227, 0.1);
-  --accent-soft-2: rgba(0, 113, 227, 0.06);
 
   --on-accent: #ffffff;
 
@@ -89,16 +87,15 @@
     --accent-hover: #1a8cff;
     --accent-press: #007aff;
     --accent-soft: rgba(10, 132, 255, 0.2);
-    --accent-soft-2: rgba(10, 132, 255, 0.12);
 
     --on-accent: #ffffff;
 
     --green: #30d158;
-    --green-soft: rgba(48, 209, 88, 0.2);
+    --green-soft: rgba(48, 209, 88, 0.35);
     --orange: #ff9f0a;
-    --orange-soft: rgba(255, 159, 10, 0.2);
+    --orange-soft: rgba(255, 159, 10, 0.35);
     --red: #ff453a;
-    --red-soft: rgba(255, 69, 58, 0.18);
+    --red-soft: rgba(255, 69, 58, 0.35);
 
     --shadow-sm: 0 1px 4px rgba(0, 0, 0, 0.3);
     --shadow-md: 0 8px 28px rgba(0, 0, 0, 0.5);
@@ -619,7 +616,7 @@ button {
 
 body.output-fullscreen .editor-panel,
 body.output-fullscreen .topbar {
-  visibility: hidden;
+  display: none;
 }
 
 /* =========================================================

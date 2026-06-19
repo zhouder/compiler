@@ -1,0 +1,41 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  lint-and-test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.9", "3.10", "3.11", "3.12"]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install dependencies
+        run: pip install ruff pytest
+
+      - name: Lint with ruff
+        run: ruff check src/
+
+      - name: Smoke-test
+        run: |
+          python src/main.py examples/test.c
+          python src/main.py examples/if_else.c
+          python src/main.py examples/for_loop.c
+          python src/main.py examples/do_while.c
+          python src/main.py examples/scanf.c
+          python src/main.py examples/func_call.c
+
+      - name: Run pytest
+        run: pytest --maxfail=1 --tb=short
+        continue-on-error: true

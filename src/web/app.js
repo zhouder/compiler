@@ -8,6 +8,7 @@ const LABELS = {
     compileBtn: "Compile",
     loadExampleBtn: "Load Example",
     langToggle: "中文",
+    langToggleAria: "Switch language to Chinese",
     filenamePlaceholder: "Filename",
     sourceEditorLabel: "Source Code",
     stageResultsLabel: "Stage Results",
@@ -27,6 +28,9 @@ const LABELS = {
     compileSuccess: "Compiled",
     compileFailed: "Failed",
     outputDir: "output/",
+    fullscreenOn: "Enter fullscreen",
+    fullscreenOff: "Exit fullscreen",
+    loadExampleFailed: "Failed to load example. Please paste code manually or try refreshing.",
   },
   zh: {
     statusReady: "就绪",
@@ -37,6 +41,7 @@ const LABELS = {
     compileBtn: "开始编译",
     loadExampleBtn: "载入示例",
     langToggle: "English",
+    langToggleAria: "切换语言至英文",
     filenamePlaceholder: "文件名",
     sourceEditorLabel: "源代码",
     stageResultsLabel: "阶段结果",
@@ -56,6 +61,9 @@ const LABELS = {
     compileSuccess: "编译成功",
     compileFailed: "编译失败",
     outputDir: "output/",
+    fullscreenOn: "进入全屏",
+    fullscreenOff: "退出全屏",
+    loadExampleFailed: "载入示例失败，请手动粘贴代码或刷新重试。",
   },
 };
 
@@ -95,6 +103,9 @@ const langToggleBtn = document.getElementById("lang-toggle");
 let currentLang = "en";
 let currentSections = {};
 let currentStage = "TOKENS";
+let _lastGoodStatus = { kind: "idle", text: "Ready" }; // for "Copied" reset
+let _rafTimer = null;
+let _copiedTimer = null;
 
 function t(key) {
   return LABELS[currentLang][key] || key;
@@ -103,6 +114,10 @@ function t(key) {
 function setStatus(kind, text) {
   statusBadge.className = `status-badge ${kind}`;
   statusBadge.textContent = text;
+  // Track last non-copied status so reset works
+  if (kind !== "idle" || !_copiedTimer) {
+    _lastGoodStatus = { kind, text };
+  }
 }
 
 function setBusy(isBusy) {
@@ -110,13 +125,31 @@ function setBusy(isBusy) {
   loadExampleBtn.disabled = isBusy;
 }
 
+// Throttle via requestAnimationFrame — avoids re-rendering line numbers on every keystroke
+function scheduleUpdateLineNumbers() {
+  if (_rafTimer !== null) return;
+  _rafTimer = requestAnimationFrame(() => {
+    _rafTimer = null;
+    updateLineNumbers();
+  });
+}
+
 function updateLineNumbers() {
   const lines = Math.max(1, sourceEditor.value.split("\n").length);
   lineNumbers.textContent = Array.from({ length: lines }, (_, index) => index + 1).join("\n");
 }
 
+// Throttle scroll sync the same way
+function scheduleScrollSync() {
+  if (_rafTimer !== null) return;
+  _rafTimer = requestAnimationFrame(() => {
+    _rafTimer = null;
+    lineNumbers.scrollTop = sourceEditor.scrollTop;
+  });
+}
+
 function renderTabs() {
-  stageTabs.innerHTML = "";
+  stageTabs.replaceChildren();
   Object.keys(currentSections).forEach((key) => {
     const node = document.createElement("button");
     node.className = "stage-tab";
@@ -136,7 +169,11 @@ function renderOutput() {
 }
 
 function updateUI() {
+  currentLang = currentLang; // no-op but signals intent
   langToggleBtn.textContent = t("langToggle");
+  langToggleBtn.setAttribute("aria-label", t("langToggleAria"));
+  document.documentElement.lang = currentLang;
+
   statusBadge.textContent = t("statusReady");
   compileBtn.textContent = t("compileBtn");
   loadExampleBtn.textContent = t("loadExampleBtn");
@@ -161,11 +198,18 @@ async function loadExample() {
   setStatus("running", t("statusLoading"));
   try {
     const response = await fetch("/api/example");
+    if (!response.ok) throw new Error(t("loadFailed"));
     const payload = await response.json();
     filenameInput.value = payload.filename;
     sourceEditor.value = payload.source;
     updateLineNumbers();
     setStatus("idle", t("statusReady"));
+    _lastGoodStatus = { kind: "idle", text: t("statusReady") };
+  } catch (_) {
+    setStatus("error", t("loadFailed"));
+    artifactHint.textContent = t("loadExampleFailed");
+    sourceEditor.value = "";
+    updateLineNumbers();
   } finally {
     setBusy(false);
   }
@@ -177,7 +221,7 @@ async function compileSource() {
 
   setBusy(true);
   setStatus("running", t("statusCompiling"));
-  artifactHint.textContent = "running";
+  artifactHint.textContent = t("statusCompiling");
 
   try {
     const response = await fetch("/api/compile", {
@@ -194,8 +238,8 @@ async function compileSource() {
       currentStage = "ERROR";
       renderTabs();
       renderOutput();
-      setStatus("error", t("statusError"));
-      artifactHint.textContent = "request failed";
+      setStatus("error", t("compileFailed"));
+      artifactHint.textContent = payload.outputDir || t("outputDir");
       return;
     }
 
@@ -204,8 +248,13 @@ async function compileSource() {
     renderTabs();
     renderOutput();
 
-    setStatus(payload.ok ? "success" : "error", payload.ok ? t("compileSuccess") : t("compileFailed"));
+    setStatus(payload.ok ? "success" : "error",
+      payload.ok ? t("compileSuccess") : t("compileFailed"));
     artifactHint.textContent = payload.outputDir || t("outputDir");
+    _lastGoodStatus = {
+      kind: payload.ok ? "success" : "error",
+      text: payload.ok ? t("compileSuccess") : t("compileFailed"),
+    };
   } finally {
     setBusy(false);
   }
@@ -213,11 +262,15 @@ async function compileSource() {
 
 async function copyCurrentOutput() {
   const text = currentSections[currentStage] || "";
-  if (!text.trim()) {
-    return;
-  }
+  if (!text.trim()) return;
   await navigator.clipboard.writeText(text);
+  // Briefly show "Copied", then restore previous good status
   setStatus("success", t("copied"));
+  clearTimeout(_copiedTimer);
+  _copiedTimer = setTimeout(() => {
+    setStatus(_lastGoodStatus.kind, _lastGoodStatus.text);
+    _copiedTimer = null;
+  }, 1500);
 }
 
 function toggleOutputFullscreen() {
@@ -225,6 +278,7 @@ function toggleOutputFullscreen() {
   outputPanel.classList.toggle("fullscreen", enabled);
   document.body.classList.toggle("output-fullscreen", enabled);
   fullscreenBtn.textContent = enabled ? t("exitFullscreen") : "⛶";
+  fullscreenBtn.setAttribute("aria-label", enabled ? t("exitFullscreen") : t("fullscreen"));
   fullscreenBtn.title = enabled ? t("exitFullscreen") : t("fullscreen");
 }
 
@@ -240,17 +294,11 @@ compileBtn.addEventListener("click", () => {
 });
 
 loadExampleBtn.addEventListener("click", () => {
-  loadExample().catch((error) => {
-    setStatus("error", t("loadFailed"));
-    artifactHint.textContent = String(error);
-  });
+  loadExample().catch(() => {});
 });
 
 copyOutputBtn.addEventListener("click", () => {
-  copyCurrentOutput().catch((error) => {
-    setStatus("error", t("loadFailed"));
-    artifactHint.textContent = String(error);
-  });
+  copyCurrentOutput().catch(() => {});
 });
 
 fullscreenBtn.addEventListener("click", toggleOutputFullscreen);
@@ -266,12 +314,10 @@ document.addEventListener("keydown", (event) => {
   }
 });
 
-sourceEditor.addEventListener("input", updateLineNumbers);
-sourceEditor.addEventListener("scroll", () => {
-  lineNumbers.scrollTop = sourceEditor.scrollTop;
-});
+sourceEditor.addEventListener("input", scheduleUpdateLineNumbers);
+sourceEditor.addEventListener("scroll", scheduleScrollSync);
 
-// Initialize
+// Bootstrap: initialize sections with placeholder messages, then load example
 currentSections = {
   TOKENS: t("notGeneratedTokens"),
   AST: t("notGeneratedAST"),
@@ -282,7 +328,4 @@ currentSections = {
 sourceEditor.value = "";
 updateLineNumbers();
 updateUI();
-loadExample().catch((error) => {
-  setStatus("error", t("loadFailed"));
-  artifactHint.textContent = String(error);
-});
+loadExample(); // fire and forget; errors handled inside

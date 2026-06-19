@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -27,7 +27,7 @@
       </div>
 
       <div class="topbar-tools">
-        <button id="lang-toggle" class="btn btn-secondary" type="button">中文</button>
+        <button id="lang-toggle" class="btn btn-secondary" type="button" aria-label="Switch language">中文</button>
         <label class="filename-input">
           <span>Filename</span>
           <input id="filename-input" type="text" value="playground.c" autocomplete="off" spellcheck="false">
@@ -61,9 +61,9 @@
           </div>
 
           <div class="output-actions">
-            <span id="status-badge" class="status-badge idle">Ready</span>
-            <button id="fullscreen-btn" class="icon-btn" type="button" title="Fullscreen">⛶</button>
-            <button id="copy-output-btn" class="icon-btn" type="button" title="Copy">Copy</button>
+            <span id="status-badge" class="status-badge idle" role="status" aria-live="polite">Ready</span>
+            <button id="fullscreen-btn" class="icon-btn" type="button" aria-label="Fullscreen" title="Fullscreen">⛶</button>
+            <button id="copy-output-btn" class="icon-btn" type="button" aria-label="Copy" title="Copy">Copy</button>
           </div>
         </div>
 
@@ -81,10 +81,6 @@
       </section>
     </main>
   </div>
-
-  <template id="stage-tab-template">
-    <button class="stage-tab" type="button"></button>
-  </template>
 
   <script src="/assets/app.js"></script>
 </body>

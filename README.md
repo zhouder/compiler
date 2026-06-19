@@ -7,7 +7,7 @@
 [![Python](https://img.shields.io/badge/Python-3.8+-blue.svg)](https://python.org)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
-![Preview](docs/preview-en.png)
+![Compiler preview screenshot — Web UI showing ASM output in dark mode](docs/preview-en.png)
 
 ## Pipeline
 
@@ -27,8 +27,12 @@ Features:
 ## Quick Start
 
 ```bash
+git clone https://github.com/zhouder/compiler.git
+cd compiler
 python src/main.py examples/test.c
 ```
+
+> **Note:** The `output/` directory is empty on first clone. Running the commands above will generate the output files automatically.
 
 Output files:
 - `output/test.tokens.txt` — Tokens
@@ -79,7 +83,7 @@ compiler/
 
 ## ASM Verification
 
-Requires DOSBox for 16-bit execution:
+Requires DOSBox for 16-bit execution (replace `D:\compiler\output` with your actual `output/` path):
 
 ```bat
 mount c D:\compiler\output
