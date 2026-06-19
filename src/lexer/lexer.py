@@ -4,13 +4,18 @@
 尝试匹配字符串、数字、标识符、运算符和界符。
 """
 
-from .token import Token, TokenType
-from .token import KEYWORDS, OPERATORS, DELIMITERS
 from .matcher import (
-    match_whitespace, match_identifier,
-    match_float, match_hex_int, match_oct_int, match_dec_int,
-    match_string_or_char, Trie, is_id_continue
+    Trie,
+    is_id_continue,
+    match_dec_int,
+    match_float,
+    match_hex_int,
+    match_identifier,
+    match_oct_int,
+    match_string_or_char,
+    match_whitespace,
 )
+from .token import DELIMITERS, KEYWORDS, OPERATORS, Token, TokenType
 
 
 class Lexer:
@@ -89,10 +94,7 @@ class Lexer:
             return None
         ttype = TokenType.CS_STR if is_string else TokenType.CS_CHAR
         lex = self.text[self.pos:self.pos + length]
-        if is_error:
-            tok = Token(TokenType.ERROR, lex, self.line, self.col)
-        else:
-            tok = Token(ttype, lex, self.line, self.col)
+        tok = Token(TokenType.ERROR, lex, self.line, self.col) if is_error else Token(ttype, lex, self.line, self.col)
         self._advance(lex)
         return tok
 

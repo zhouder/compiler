@@ -4,7 +4,6 @@ Lexer 会反复从当前位置尝试匹配数字、标识符、字符串、运�
 这些函数只返回匹配长度，不直接创建 Token。
 """
 
-from typing import Tuple
 
 WHITESPACE = set(" \t\r\n\f\v")  # C 源码里被当作"空白"的字符
 
@@ -139,7 +138,7 @@ def match_dec_int(text: str, pos: int) -> int:
     return j - pos
 
 
-def match_string_or_char(text: str, pos: int) -> Tuple[int, bool, bool]:
+def match_string_or_char(text: str, pos: int) -> tuple[int, bool, bool]:
     """匹配 "..." 字符串或 'x' 字符常量。
 
     返回 (长度, 是否字符串, 是否出错)。

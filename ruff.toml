@@ -1,9 +1,23 @@
 line-length = 120
 target-version = "py39"
 
+# Exclude build, venv, and output dirs
+extend-exclude = ["output", "build", "dist", ".venv"]
+
 [lint]
 select = ["E", "F", "W", "I", "N", "UP", "SIM", "C", "B"]
-ignore = ["E501", "C901"]
+ignore = [
+    "E501",   # line too long (CJK punctuation expands line length)
+    "C901",   # function complexity
+    "N802",   # function name should be lowercase (visitor pattern uses visit_Program by design)
+    "N806",   # variable in function should be lowercase (lexer uses Lf/L16 etc. for token categories)
+    "E701",   # multiple statements on one line (colon) (common in tkinter one-liner callbacks)
+    "E741",   # ambiguous variable name 'l' (lexer uses l for length)
+    "SIM102", # nested if (sometimes clearer with early returns)
+    "SIM105", # contextlib.suppress (try/except/pass is more readable in tkinter init)
+    "E402",   # module-level import not at top of file (sys.path hack for sys.path.insert requires this)
+    "C416",   # unnecessary dict comprehension (rewrite using dict()) - minor cosmetic
+]
 
 [lint.isort]
 known-first-party = ["lexer", "parser", "semantic", "ir", "codegen"]

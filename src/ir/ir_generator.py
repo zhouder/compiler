@@ -5,11 +5,33 @@ IR 生成器遍历 AST，把表达式、声明和控制流翻译成四元式。
 """
 
 from parser.ast_nodes import (
-    Program, Include, StructDef, FunctionDef, Block, VarDecl, DeclStmt,
-    InitializerList, Assign, IfStmt, WhileStmt, ForStmt, DoWhileStmt, BreakStmt, ContinueStmt,
-    ReturnStmt, ExprStmt, EmptyStmt, CallExpr, BinaryExpr, UnaryExpr, Literal,
-    Identifier, ArrayAccess, MemberAccess
+    ArrayAccess,
+    Assign,
+    BinaryExpr,
+    Block,
+    BreakStmt,
+    CallExpr,
+    ContinueStmt,
+    DeclStmt,
+    DoWhileStmt,
+    EmptyStmt,
+    ExprStmt,
+    ForStmt,
+    FunctionDef,
+    Identifier,
+    IfStmt,
+    Include,
+    InitializerList,
+    Literal,
+    MemberAccess,
+    Program,
+    ReturnStmt,
+    StructDef,
+    UnaryExpr,
+    VarDecl,
+    WhileStmt,
 )
+
 from .quadruple import Quadruple
 
 

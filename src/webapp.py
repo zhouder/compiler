@@ -174,7 +174,7 @@ class CompilerWebHandler(BaseHTTPRequestHandler):
                 status=HTTPStatus.REQUEST_TIMEOUT,
             )
             return
-        except Exception as exc:
+        except Exception:
             # 未知异常不向上传播，只返回安全描述
             self.send_json(
                 {"ok": False, "error": "编译服务内部错误，请稍后重试。"},

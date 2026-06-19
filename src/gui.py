@@ -4,12 +4,13 @@
 词法、AST、语义、IR 和 ASM 各阶段结果。
 """
 
-import sys
-import re
-import tkinter as tk
 import ctypes
+import re
+import sys
+import tkinter as tk
 from pathlib import Path
-from tkinter import filedialog, font as tkfont, messagebox, ttk
+from tkinter import filedialog, messagebox, ttk
+from tkinter import font as tkfont
 
 CURRENT_DIR = Path(__file__).resolve().parent
 if str(CURRENT_DIR) not in sys.path:
@@ -120,7 +121,7 @@ class ModernButton(tk.Frame):
         self.border_color = COLOR["accent"] if primary else COLOR["border"]
         # Apple 蓝主按钮配白字；次按钮配主文本色
         self.fg_color = "#ffffff" if primary else COLOR["text"]
-        
+
         super().__init__(
             parent,
             bg=self.bg_color,
@@ -130,7 +131,7 @@ class ModernButton(tk.Frame):
             highlightcolor=self.border_color,
         )
         self.command = command
-        
+
         self.label = tk.Label(
             self,
             text=text,
@@ -141,7 +142,7 @@ class ModernButton(tk.Frame):
             pady=13,
         )
         self.label.pack(fill=tk.BOTH, expand=True)
-        
+
         for widget in (self, self.label):
             widget.bind("<Button-1>", self.on_click)
             widget.bind("<Enter>", self.on_enter)
@@ -164,7 +165,7 @@ class EditorTab(tk.Frame):
         self.key = key
         self.command = command
         self.selected = False
-        
+
         self.title_label = tk.Label(
             self,
             text=title,
@@ -175,7 +176,7 @@ class EditorTab(tk.Frame):
             pady=14,
         )
         self.indicator = tk.Frame(self, height=3, bg=COLOR["tab_inactive"])
-        
+
         self.title_label.pack(side=tk.TOP, fill=tk.BOTH, expand=True)
         self.indicator.pack(side=tk.BOTTOM, fill=tk.X)
 
@@ -199,7 +200,7 @@ class EditorTab(tk.Frame):
         bg = COLOR["tab_active"] if selected else COLOR["tab_inactive"]
         fg = COLOR["text"] if selected else COLOR["muted"]
         ind_color = COLOR["tab_active"] if selected else COLOR["tab_inactive"]
-        
+
         self.configure(bg=bg)
         self.title_label.configure(bg=bg, fg=fg)
         self.indicator.configure(bg=ind_color)
@@ -231,7 +232,7 @@ class ModernCodeBox(tk.Frame):
             padx=24, pady=20,
             font=fonts.code
         )
-        
+
         self.yscroll = ttk.Scrollbar(self, orient=tk.VERTICAL, command=self.on_scrollbar)
         self.xscroll = ttk.Scrollbar(self, orient=tk.HORIZONTAL, command=self.text.xview)
         self.text.configure(yscrollcommand=self.on_text_scroll, xscrollcommand=self.xscroll.set)
@@ -257,21 +258,21 @@ class ModernCodeBox(tk.Frame):
             for event in ("<MouseWheel>", "<ButtonRelease-1>", "<Configure>"):
                 self.text.bind(event, self.refresh_line_numbers, add="+")
             self.text.bind("<KeyRelease>", self.refresh_line_numbers, add="+")
-            
+
         self.set("")
 
     def on_key_release(self, event=None):
         # 避免方向键触发高亮导致性能问题，只在输入时触发
-        if event and event.keysym in ("Up", "Down", "Left", "Right"): 
+        if event and event.keysym in ("Up", "Down", "Left", "Right"):
             return
         self.apply_highlight()
 
     def apply_highlight(self):
         if not self.enable_highlight: return
         content = self.text.get("1.0", tk.END)
-        
+
         # 移除旧的高亮
-        for tag in SYNTAX_RULES.keys():
+        for tag in SYNTAX_RULES:
             self.text.tag_remove(tag, "1.0", tk.END)
 
         # 重新计算高亮
@@ -338,7 +339,7 @@ class CompilerGUI:
         self.fullscreen_window = None
         self.fullscreen_viewer = None
         self.fullscreen_title_var = tk.StringVar()
-        
+
         self.status_var = tk.StringVar(value="就绪")
 
         self.configure_styles()
@@ -352,14 +353,14 @@ class CompilerGUI:
         try: style.theme_use("clam")
         except tk.TclError: pass
 
-        style.configure("TScrollbar", 
+        style.configure("TScrollbar",
                         background=COLOR["button_bg"],
                         troughcolor=COLOR["code_bg"],
                         bordercolor=COLOR["code_bg"],
                         arrowcolor=COLOR["muted"],
                         relief="flat")
         style.map("TScrollbar", background=[("active", COLOR["button_hover"])])
-        
+
         style.configure("Sash", background=COLOR["border_soft"], sashthickness=4)
         style.configure("TPanedwindow", background=COLOR["app_bg"])
 
@@ -391,7 +392,7 @@ class CompilerGUI:
 
         btn_frame = tk.Frame(toolbar, bg=COLOR["panel_bg"])
         btn_frame.pack(side=tk.LEFT)
-        
+
         ModernButton(btn_frame, "打开", self.open_file, self.fonts).pack(side=tk.LEFT, padx=(0, 8))
         ModernButton(btn_frame, "保存", self.save_file, self.fonts).pack(side=tk.LEFT, padx=(0, 8))
         ModernButton(btn_frame, "清空", self.clear_results, self.fonts).pack(side=tk.LEFT, padx=(0, 8))
@@ -414,7 +415,7 @@ class CompilerGUI:
         editor_header = tk.Frame(left_panel, bg=COLOR["panel_bg"], height=68)
         editor_header.pack(side=tk.TOP, fill=tk.X)
         editor_header.pack_propagate(False)
-        
+
         tk.Label(
             editor_header,
             text="源代码",
@@ -425,7 +426,7 @@ class CompilerGUI:
         self.file_lbl = tk.Label(editor_header, text="未命名文件.c", bg=COLOR["panel_bg"],
                                  fg=COLOR["muted"], font=self.fonts.small)
         self.file_lbl.pack(side=tk.LEFT)
-        
+
         self.editor = ModernCodeBox(left_panel, self.fonts, readonly=False, enable_highlight=True)
         self.editor.pack(fill=tk.BOTH, expand=True, padx=10, pady=(0, 10))
 
@@ -436,18 +437,18 @@ class CompilerGUI:
             highlightthickness=1,
             highlightbackground=COLOR["border"],
         )
-        
+
         tabs_header = tk.Frame(right_panel, bg=COLOR["panel_bg"], height=68)
         tabs_header.pack(side=tk.TOP, fill=tk.X)
         tabs_header.pack_propagate(False)
-        
+
         tab_container = tk.Frame(tabs_header, bg=COLOR["panel_bg"])
         tab_container.pack(side=tk.LEFT, fill=tk.Y, padx=(10, 0))
         for key, title in STAGES:
             tab = EditorTab(tab_container, key, title, self.select_stage, self.fonts)
             tab.pack(side=tk.LEFT, padx=(0, 2), fill=tk.Y)
             self.stage_tabs[key] = tab
-            
+
         ModernButton(tabs_header, "复制", self.copy_current_output, self.fonts).pack(side=tk.RIGHT, padx=(8, 12), pady=8)
         ModernButton(tabs_header, "全屏", self.open_output_fullscreen, self.fonts).pack(side=tk.RIGHT, padx=(0, 0), pady=8)
 
@@ -456,7 +457,7 @@ class CompilerGUI:
 
         self.paned.add(left_panel, weight=1)
         self.paned.add(right_panel, weight=1)
-        
+
         self.statusbar = tk.Frame(self.root, bg=COLOR["panel_alt"], height=42)
         self.statusbar.pack(side=tk.BOTTOM, fill=tk.X)
         self.statusbar.pack_propagate(False)
@@ -465,7 +466,7 @@ class CompilerGUI:
                  font=self.fonts.small).pack(side=tk.LEFT, padx=10)
         tk.Label(self.statusbar, text="UTF-8  |  C subset  |  MASM 16-bit", bg=COLOR["panel_alt"], fg=COLOR["muted"],
                  font=self.fonts.small).pack(side=tk.RIGHT, padx=10)
-        
+
         self.root.after(200, self.set_initial_pane_position)
 
     def set_initial_pane_position(self):
@@ -477,9 +478,9 @@ class CompilerGUI:
         self.status_var.set(msg)
         # 错误态用 Apple 红淡背景，正常态用次级面板色
         color = "#fff0ef" if is_error else COLOR["panel_alt"]
-        
+
         if hasattr(self, 'statusbar'):
-            self.statusbar.configure(bg=color) 
+            self.statusbar.configure(bg=color)
             for child in self.statusbar.winfo_children():
                 try:
                     child.configure(bg=color)
@@ -490,12 +491,12 @@ class CompilerGUI:
         self.current_stage = key
         for stage_key, tab in self.stage_tabs.items():
             tab.set_selected(stage_key == key)
-            
+
         content = self.stage_outputs.get(key, "")
         self.output_viewer.set(content)
         self.apply_output_tags(self.output_viewer, key, content)
         self.sync_fullscreen_output()
-        
+
     def stage_title(self, key=None):
         key = key or self.current_stage
         return next((title for stage_key, title in STAGES if stage_key == key), key)
@@ -611,7 +612,7 @@ class CompilerGUI:
 
     def compile_current(self):
         if not self.save_file(): return
-        
+
         self.update_status("编译中...")
         self.root.update()
         try:
@@ -626,7 +627,7 @@ class CompilerGUI:
             self.stage_outputs[key] = section_map.get(key, "")
         if "ERROR" in section_map:
             self.stage_outputs["SEMANTIC"] = section_map["ERROR"]
-        
+
         self.select_stage(self.current_stage)
 
         if not result.ok:

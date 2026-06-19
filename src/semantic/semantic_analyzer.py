@@ -5,13 +5,34 @@
 """
 
 from parser.ast_nodes import (
-    Program, Include, StructDef, Param, FunctionDef, Block, VarDecl, DeclStmt,
-    InitializerList, Assign, IfStmt, WhileStmt, ForStmt, DoWhileStmt, BreakStmt, ContinueStmt,
-    ReturnStmt, ExprStmt, EmptyStmt, CallExpr, BinaryExpr, UnaryExpr, Literal,
-    Identifier, ArrayAccess, MemberAccess
+    ArrayAccess,
+    Assign,
+    BinaryExpr,
+    Block,
+    BreakStmt,
+    CallExpr,
+    ContinueStmt,
+    DeclStmt,
+    DoWhileStmt,
+    EmptyStmt,
+    ExprStmt,
+    ForStmt,
+    FunctionDef,
+    Identifier,
+    IfStmt,
+    Include,
+    InitializerList,
+    Literal,
+    MemberAccess,
+    Program,
+    ReturnStmt,
+    StructDef,
+    UnaryExpr,
+    VarDecl,
+    WhileStmt,
 )
-from .symbol_table import SymbolTable, SemanticError
 
+from .symbol_table import SemanticError, SymbolTable
 
 NUMERIC_TYPES = {"int", "char", "float"}
 BUILTIN_TYPES = NUMERIC_TYPES | {"void"}

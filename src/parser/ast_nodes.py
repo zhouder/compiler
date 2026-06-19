@@ -5,7 +5,7 @@
 """
 
 from dataclasses import dataclass, field
-from typing import Any, List, Optional
+from typing import Any, Optional
 
 
 class ASTNode:
@@ -18,8 +18,8 @@ class ASTNode:
 class Program(ASTNode):
     """整个翻译单元：includes + 顶层声明（函数/全局变量/结构体）。"""
 
-    includes: List["Include"]
-    declarations: List[ASTNode]
+    includes: list["Include"]
+    declarations: list[ASTNode]
 
     @property
     def functions(self):
@@ -41,7 +41,7 @@ class StructDef(ASTNode):
     """结构体类型定义。"""
 
     name: str
-    fields: List["VarDecl"]
+    fields: list["VarDecl"]
 
 
 @dataclass
@@ -60,7 +60,7 @@ class FunctionDef(ASTNode):
 
     return_type: str
     name: str
-    params: List[Param]
+    params: list[Param]
     body: "Block"
 
 
@@ -68,7 +68,7 @@ class FunctionDef(ASTNode):
 class Block(ASTNode):
     """用 { } 包裹的复合语句/函数体。"""
 
-    statements: List[ASTNode] = field(default_factory=list)
+    statements: list[ASTNode] = field(default_factory=list)
 
 
 @dataclass
@@ -86,14 +86,14 @@ class VarDecl(ASTNode):
 class DeclStmt(ASTNode):
     """一行声明多个变量，如 `int a, b, c;`。"""
 
-    declarations: List[VarDecl]
+    declarations: list[VarDecl]
 
 
 @dataclass
 class InitializerList(ASTNode):
     """花括号初始化列表，如 `{1, 2, 3}` 或 `{{1,2}, {3,4}}`。"""
 
-    values: List[ASTNode]
+    values: list[ASTNode]
 
 
 @dataclass
@@ -179,7 +179,7 @@ class CallExpr(ASTNode):
     """函数调用表达式。"""
 
     callee: str
-    args: List[ASTNode]
+    args: list[ASTNode]
 
 
 @dataclass
