@@ -3,17 +3,26 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>C Compiler Studio Web</title>
+  <meta name="color-scheme" content="light dark">
+  <meta name="theme-color" content="#fbfbfd" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)">
+  <title>C Compiler Studio</title>
   <link rel="stylesheet" href="/assets/styles.css">
 </head>
 <body>
   <div class="app-shell">
     <header class="topbar">
       <div class="brand">
-        <span class="brand-mark">C</span>
+        <span class="brand-mark" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M8.5 6L3.7 12 8.5 18" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M15.5 6L20.3 12 15.5 18" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            <line x1="13" y1="4" x2="11" y2="20" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+          </svg>
+        </span>
         <div class="brand-copy">
           <h1>C Compiler Studio</h1>
-          <p>Tokens · AST · Semantic · IR · ASM</p>
+          <p>Lexer · Parser · Semantic · IR · ASM</p>
         </div>
       </div>
 
@@ -21,7 +30,7 @@
         <button id="lang-toggle" class="btn btn-secondary" type="button">中文</button>
         <label class="filename-input">
           <span>Filename</span>
-          <input id="filename-input" type="text" value="playground.c" autocomplete="off">
+          <input id="filename-input" type="text" value="playground.c" autocomplete="off" spellcheck="false">
         </label>
         <button id="load-example-btn" class="btn btn-secondary" type="button">Load Example</button>
         <button id="compile-btn" class="btn btn-primary" type="button">Compile</button>

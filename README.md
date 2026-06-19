@@ -22,6 +22,7 @@ Features:
 - Quadruple IR Generation
 - 16-bit x86 ASM CodeGen
 - CLI + GUI + Web Interface
+- Web UI with adaptive light/dark theme and Chinese / English switcher
 
 ## Quick Start
 

@@ -33,34 +33,39 @@ EMPTY_OUTPUT = {
     "ASM": "尚未生成汇编代码。",
 }
 
-# 轻量 IDE 风格配色，减少大面积高饱和渐变和系统默认控件感。
+# Apple 风格配色（参考 apple.com / macOS Sonoma 浅色主题）。
+# tkinter 无原生圆角与毛玻璃，这里用扁平色块 + 极浅描边近似 Apple 观感。
 COLOR = {
-    "app_bg": "#090d14",
-    "panel_bg": "#111722",
-    "panel_alt": "#161d29",
-    "code_bg": "#070c13",
-    "border": "#2a3648",
-    "border_soft": "#1d2735",
-    "text": "#edf4fb",
-    "text_ui": "#dce6f2",
-    "muted": "#8f9bae",
-    "accent": "#42d6b4",
-    "accent_hover": "#56e7c5",
-    "accent_blue": "#68a8ff",
-    "selection": "#1d3f5c",
-    "button_bg": "#192333",
-    "button_hover": "#243246",
-    "tab_active": "#1c2636",
-    "tab_inactive": "#111722",
-    
-    # 语法高亮颜色
-    "syn_keyword": "#569cd6",    # 蓝色 (if, while)
-    "syn_type": "#4ec9b0",       # 青色 (int, struct)
-    "syn_string": "#ce9178",     # 橙色 ("hello")
-    "syn_comment": "#6a9955",    # 绿色 (// comment)
-    "syn_number": "#b5cea8",     # 浅绿 (123)
-    "syn_function": "#dcdcaa",   # 黄色 (printf)
-    "syn_error": "#ff6b6b",      # 红色 (Error)
+    "app_bg": "#f5f5f7",         # apple.com 经典浅灰底
+    "panel_bg": "#ffffff",        # 卡片纯白
+    "panel_alt": "#fbfbfd",       # 次级面板
+    "code_bg": "#ffffff",         # 代码区白底
+    "gutter_bg": "#fafafa",
+    "border": "#d2d2d7",          # Apple 浅灰描边
+    "border_soft": "#e8e8ed",
+    "text": "#1d1d1f",            # Apple 近黑主文本
+    "text_ui": "#1d1d1f",
+    "muted": "#6e6e73",           # Apple 次要灰
+    "muted_2": "#86868b",
+    "accent": "#0071e3",          # Apple system blue
+    "accent_hover": "#0077ed",
+    "accent_press": "#006edb",
+    "accent_blue": "#0071e3",
+    "selection": "#0071e3",
+    "button_bg": "#e8e8ed",       # 次按钮浅灰
+    "button_hover": "#dfdfe4",
+    "tab_active": "#ffffff",      # 分段控件选中白
+    "tab_inactive": "#ffffff",    # 未选中与面板同色（tkinter 需真实色值）
+    "tab_track": "#ececef",       # 分段控件底
+
+    # 语法高亮（浅色底下的高可读色，参考 Xcode light）
+    "syn_keyword": "#ad3da4",     # 紫红 (if, while)
+    "syn_type": "#3900a0",        # 靛蓝 (int, struct)
+    "syn_string": "#d12f1b",      # 红 ("hello")
+    "syn_comment": "#267507",     # 绿 (// comment)
+    "syn_number": "#272ad8",      # 蓝 (123)
+    "syn_function": "#4b27ad",    # 紫 (printf)
+    "syn_error": "#ff3b30",       # Apple red (Error)
 }
 
 # 简单的 C 语言高亮正则规则
@@ -113,7 +118,8 @@ class ModernButton(tk.Frame):
         self.bg_color = COLOR["accent"] if primary else COLOR["button_bg"]
         self.hover_color = COLOR["accent_hover"] if primary else COLOR["button_hover"]
         self.border_color = COLOR["accent"] if primary else COLOR["border"]
-        self.fg_color = "#07120f" if primary else COLOR["text_ui"]
+        # Apple 蓝主按钮配白字；次按钮配主文本色
+        self.fg_color = "#ffffff" if primary else COLOR["text"]
         
         super().__init__(
             parent,
@@ -189,9 +195,10 @@ class EditorTab(tk.Frame):
 
     def set_selected(self, selected):
         self.selected = selected
+        # Apple 分段控件观感：选中态用主文本色（不加下划线），未选中用次要灰
         bg = COLOR["tab_active"] if selected else COLOR["tab_inactive"]
         fg = COLOR["text"] if selected else COLOR["muted"]
-        ind_color = COLOR["accent"] if selected else COLOR["tab_inactive"]
+        ind_color = COLOR["tab_active"] if selected else COLOR["tab_inactive"]
         
         self.configure(bg=bg)
         self.title_label.configure(bg=bg, fg=fg)
@@ -217,9 +224,9 @@ class ModernCodeBox(tk.Frame):
         self.text = tk.Text(
             self, wrap=tk.NONE, undo=not readonly,
             bg=COLOR["code_bg"], fg=COLOR["text"],
-            insertbackground=COLOR["text"],          
-            selectbackground=COLOR["selection"],     
-            selectforeground=COLOR["text"],
+            insertbackground=COLOR["accent"],
+            selectbackground=COLOR["selection"],
+            selectforeground="#ffffff",
             relief=tk.FLAT, bd=0, highlightthickness=0,
             padx=24, pady=20,
             font=fonts.code
@@ -346,14 +353,14 @@ class CompilerGUI:
         except tk.TclError: pass
 
         style.configure("TScrollbar", 
-                        background="#4b5565",
+                        background=COLOR["button_bg"],
                         troughcolor=COLOR["code_bg"],
-                        bordercolor=COLOR["app_bg"],
+                        bordercolor=COLOR["code_bg"],
                         arrowcolor=COLOR["muted"],
                         relief="flat")
-        style.map("TScrollbar", background=[("active", "#667085")])
+        style.map("TScrollbar", background=[("active", COLOR["button_hover"])])
         
-        style.configure("Sash", background=COLOR["border"], sashthickness=2)
+        style.configure("Sash", background=COLOR["border_soft"], sashthickness=4)
         style.configure("TPanedwindow", background=COLOR["app_bg"])
 
     def build_menu(self):
@@ -468,7 +475,8 @@ class CompilerGUI:
 
     def update_status(self, msg, is_error=False):
         self.status_var.set(msg)
-        color = "#3a1f28" if is_error else COLOR["panel_alt"]
+        # 错误态用 Apple 红淡背景，正常态用次级面板色
+        color = "#fff0ef" if is_error else COLOR["panel_alt"]
         
         if hasattr(self, 'statusbar'):
             self.statusbar.configure(bg=color) 
